@@ -34,8 +34,8 @@ export class ProfileComponent implements OnInit {
         this.isLoading = false;
       },
       error: (err) => {
-        console.error('Lỗi lấy profile:', err);
-        this.errorMessage = 'Không thể tải thông tin người dùng.';
+        console.error('Error in getting profile:', err);
+        this.errorMessage = 'Do  not download information of user.';
         this.isLoading = false;
         if (err.status === 401) {
           this.auth.logout();
@@ -48,7 +48,6 @@ export class ProfileComponent implements OnInit {
   toggleEdit() {
     this.isEditing = !this.isEditing;
     if (!this.isEditing && this.user) {
-      // Reset edit data when cancelling
       this.editData = {
         fullName: this.user.fullName
       };
@@ -76,8 +75,8 @@ export class ProfileComponent implements OnInit {
         }, 3000);
       },
       error: (err) => {
-        console.error('Lỗi cập nhật profile:', err);
-        this.errorMessage = 'Không thể cập nhật hồ sơ.';
+        console.error('Error update profile:', err);
+        this.errorMessage = 'Can not update profile.';
         this.isSaving = false;
       }
     });

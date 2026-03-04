@@ -1,0 +1,6 @@
+@FacilityIssueTracker_HostAddress = http://localhost:5026
+
+GET {{FacilityIssueTracker_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

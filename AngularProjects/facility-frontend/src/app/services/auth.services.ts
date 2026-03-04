@@ -43,8 +43,8 @@ export class AuthService {
     }
   }
 
-  register(data: { fullName: string; email: string; password: string }): Observable<any> {
-    return this.http.post(`${this.apiUrl}/register`, data).pipe(
+  register(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/register`, data, { responseType: 'text' }).pipe(
       catchError(err => {
         console.error('Register failed:', err);
         return throwError(() => err);
@@ -93,9 +93,6 @@ export class AuthService {
     return this.http.post(`${this.apiUrl}/change-password`, data);
   }
 
-  // ──────────────────────────────────────────────
-  // Method mới để ProfileComponent gọi an toàn
-  // ──────────────────────────────────────────────
 
   /**
    * Cập nhật tên hiển thị (gọi sau khi PUT profile thành công)

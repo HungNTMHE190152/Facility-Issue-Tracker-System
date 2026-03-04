@@ -38,6 +38,19 @@ export class RegisterComponent {
       return;
     }
 
+    if (!this.user.email.trim()) {
+      this.errorMessage = 'Please enter email';
+      this.isLoading = false;
+      return;
+    }
+
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,10}$/;
+    if (!emailPattern.test(this.user.email.trim())) {
+      this.errorMessage = 'Invalid email format';
+      this.isLoading = false;
+      return;
+    }
+
     if (this.user.password !== this.user.confirmPassword) {
       this.errorMessage = 'Password and confirm password do not match';
       this.isLoading = false;
@@ -53,14 +66,15 @@ export class RegisterComponent {
     const data = {
       fullName: this.user.fullName.trim(),
       email: this.user.email.trim(),
-      password: this.user.password.trim()
+      password: this.user.password.trim(),
+      role: this.user.role
     };
 
     this.authService.register(data).subscribe({
       next: () => {
         alert('Register successfully');
         this.isLoading = false;
-        this.router.navigate(['/login']);
+        this.router.navigate(['/login'], { queryParams: { email: this.user.email, password: this.user.password } });
       },
       error: (err) => {
         this.isLoading = false;

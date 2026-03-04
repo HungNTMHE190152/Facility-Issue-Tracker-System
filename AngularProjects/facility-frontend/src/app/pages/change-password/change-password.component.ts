@@ -31,15 +31,23 @@ export class ChangePasswordComponent {
 
     // Validate client-side
     if (!oldPass) {
-      this.errorMessage = 'Vui lòng nhập mật khẩu hiện tại';
+      this.errorMessage = 'Please enter your current password';
+      return;
+    }
+    if (!newPass) {
+      this.errorMessage = 'Please enter a new password';
+      return;
+    }
+    if (!confirmPass) {
+      this.errorMessage = 'Please confirm your new password';
       return;
     }
     if (newPass !== confirmPass) {
-      this.errorMessage = 'Mật khẩu mới và xác nhận không khớp';
+      this.errorMessage = 'New password and accespt password do not match!!!';
       return;
     }
     if (newPass.length < 6) {
-      this.errorMessage = 'Mật khẩu mới phải có ít nhất 6 ký tự';
+      this.errorMessage = 'Password must be at least 6 characters!!!';
       return;
     }
 
@@ -51,7 +59,7 @@ export class ChangePasswordComponent {
     }).subscribe({
       next: () => {
         this.isLoading = false;
-        this.successMessage = 'Đổi mật khẩu thành công! Đang chuyển về trang cá nhân...';
+        this.successMessage = 'Changed password successfully! Going back to profile...';
         
         // Reset form
         this.currentPassword = '';
@@ -66,25 +74,25 @@ export class ChangePasswordComponent {
       error: (err) => {
         this.isLoading = false;
 
-        let msg = 'Đổi mật khẩu thất bại. Vui lòng thử lại.';
+        let msg = 'Changed password failed!!! Please try again.';
 
         if (err.status === 400) {
           const backendErr = err.error;
           if (backendErr?.error?.toLowerCase().includes('wrong') || backendErr?.message?.toLowerCase().includes('wrong')) {
-            msg = 'Mật khẩu hiện tại không đúng. Vui lòng kiểm tra lại.';
+            msg = 'Password is not correct.Please try again.';
           } else if (typeof backendErr === 'string') {
             msg = backendErr;
           } else if (backendErr?.message) {
             msg = backendErr.message;
           } else {
-            msg = 'Mật khẩu hiện tại không đúng hoặc yêu cầu không hợp lệ.';
+            msg = 'Current password is not correct.';
           }
         } else if (err.status === 401) {
-          msg = 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.';
+          msg = 'Your login session has expired. Please log in again.';
           this.auth.logout();
           setTimeout(() => this.router.navigate(['/login']), 2000);
         } else if (err.status === 0) {
-          msg = 'Không kết nối được server. Vui lòng kiểm tra mạng.';
+          msg = 'Do not connect to sever. Please check internet.';
         }
 
         this.errorMessage = msg;
@@ -92,7 +100,6 @@ export class ChangePasswordComponent {
     });
   }
 
-  // Helper để kiểm tra form có hợp lệ để bật nút
   get isFormValid(): boolean {
     const old = this.currentPassword.trim();
     const nw = this.newPassword.trim();
