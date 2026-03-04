@@ -1,0 +1,125 @@
+<div class="register-wrapper">
+  <!-- Dynamic Background Effects -->
+  <div class="bg-shape shape-1"></div>
+  <div class="bg-shape shape-2"></div>
+  <div class="bg-shape shape-3"></div>
+
+  <div class="register-container">
+    <div class="register-card">
+      <div class="register-header">
+        <div class="logo-circle">
+          <svg xmlns="http://www.w3.org/2000/svg" class="logo-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+              clip-rule="evenodd" />
+          </svg>
+        </div>
+        <h2 class="title">Create an Account</h2>
+        <p class="subtitle">
+          Already have an account? <a routerLink="/login" class="link">Log in</a>
+        </p>
+        <div *ngIf="errorMessage" class="error-message"
+          style="color: red; margin-top: 10px; font-size: 0.9em; text-align: center;">
+          {{ errorMessage }}
+        </div>
+      </div>
+
+      <form class="register-form" (ngSubmit)="onSubmit()">
+        <!-- Full Name -->
+        <div class="input-group">
+          <label for="name" class="input-label">Full Name</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
+            </svg>
+            <input id="name" name="fullName" type="text" required [(ngModel)]="user.fullName" class="form-input"
+              placeholder="John Doe">
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="input-group">
+          <label for="email" class="input-label">Email Address</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+            </svg>
+            <input id="email" name="email" type="email" autocomplete="email" required [(ngModel)]="user.email"
+              class="form-input" placeholder="john@example.com">
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="input-group">
+          <label for="password" class="input-label">Password</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clip-rule="evenodd" />
+            </svg>
+            <input id="password" name="password" type="password" required [(ngModel)]="user.password" class="form-input"
+              placeholder="At least 6 characters">
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label for="confirmPassword" class="input-label">Confirm Password</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clip-rule="evenodd" />
+            </svg>
+            <input id="confirmPassword" name="confirmPassword" type="password" required
+              [(ngModel)]="user.confirmPassword" class="form-input" placeholder="Re-enter password">
+          </div>
+        </div>
+
+        <!-- Role -->
+        <div class="input-group full-width">
+          <label for="role" class="input-label">I am a...</label>
+          <div class="input-wrapper select-wrapper">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <select id="role" name="role" [(ngModel)]="user.role" class="form-input custom-select">
+              <option value="REPORTER">Student / Staff (Reporter)</option>
+              <option value="TECHNICIAN">Technician</option>
+              <option value="DISPATCHER">Dispatcher (Manager)</option>
+            </select>
+            <div class="select-arrow">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clip-rule="evenodd" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="terms-row">
+          <label class="checkbox-container">
+            <input type="checkbox" required name="terms">
+            <span class="checkmark"></span>
+            <span class="checkbox-label">I agree to the <a href="#" class="link">Terms & Conditions</a></span>
+          </label>
+        </div>
+
+        <button type="submit" class="submit-btn"
+          [class.btn-active]="user.fullName && user.email && user.password && user.confirmPassword"
+          [disabled]="isLoading">
+          <span *ngIf="!isLoading">Create Account</span>
+          <span *ngIf="isLoading">Creating...</span>
+          <svg *ngIf="!isLoading" class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
