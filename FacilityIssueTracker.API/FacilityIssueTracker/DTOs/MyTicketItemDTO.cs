@@ -1,0 +1,20 @@
+namespace FacilityIssueTracker.DTOs;
+
+public class MyTicketItemDTO
+{
+    public int TicketId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Location { get; set; } = string.Empty;
+    public int? Priority { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public int CategoryId { get; set; }
+    public string CategoryName { get; set; } = string.Empty;
+    public DateTime? CreatedAt { get; set; }
+    public DateTime? AssignedAt { get; set; }
+    public DateTime? ResolvedAt { get; set; }
+    public DateTime? ClosedAt { get; set; }
+    public string? ImageBefore { get; set; }
+    public string? ImageAfter { get; set; }
+    public string? TechnicianName { get; set; }
+}

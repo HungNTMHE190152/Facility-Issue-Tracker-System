@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using BCrypt.Net;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -53,7 +54,20 @@ public class AuthController : ControllerBase
             .Include(x => x.Role)
             .FirstOrDefaultAsync(x => x.Email == dto.Email);
 
-        if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+        if (user == null)
+            return Unauthorized(new { message = "Email hoặc mật khẩu không đúng" });
+
+        var isPasswordValid = false;
+        try
+        {
+            isPasswordValid = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
+        }
+        catch (SaltParseException)
+        {
+            isPasswordValid = user.PasswordHash == dto.Password;
+        }
+
+        if (!isPasswordValid)
             return Unauthorized(new { message = "Email hoặc mật khẩu không đúng" });
 
         var token = _jwt.GenerateToken(user);

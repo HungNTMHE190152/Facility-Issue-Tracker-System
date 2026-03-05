@@ -34,6 +34,8 @@
     <ng-container *ngIf="isLoggedIn">
         <span class="nav-link">👋 {{ userName }}</span>
 
+        <a routerLink="/tickets/create" class="nav-link">Create Ticket</a>
+        <a routerLink="/tickets/my" class="nav-link">My Tickets</a>
         <a routerLink="/profile" class="nav-link">Profile</a>
         <a routerLink="/change-password" class="nav-link">Change Password</a>
 

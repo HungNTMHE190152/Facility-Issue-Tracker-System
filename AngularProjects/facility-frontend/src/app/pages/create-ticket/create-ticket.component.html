@@ -1,0 +1,84 @@
+<div class="ticket-page">
+  <div class="ticket-card">
+    <div class="header-row">
+      <h2>Create Ticket</h2>
+      <a routerLink="/tickets/my" class="back-link">My Tickets</a>
+    </div>
+
+    <form (ngSubmit)="submit()" class="ticket-form">
+      <div class="form-group">
+        <label>Title *</label>
+        <input
+          type="text"
+          name="title"
+          [(ngModel)]="formData.title"
+          maxlength="200"
+          placeholder="Short issue title"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label>Description *</label>
+        <textarea
+          name="description"
+          [(ngModel)]="formData.description"
+          rows="4"
+          placeholder="Describe the issue details"
+          required
+        ></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Location *</label>
+          <input
+            type="text"
+            name="location"
+            [(ngModel)]="formData.location"
+            maxlength="100"
+            placeholder="Building/Floor/Room"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Category *</label>
+          <select name="categoryId" [(ngModel)]="formData.categoryId" required>
+            <option [ngValue]="0">Select category</option>
+            <option *ngFor="let item of categories" [ngValue]="item.categoryId">
+              {{ item.categoryName }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Priority</label>
+          <select name="priority" [(ngModel)]="formData.priority">
+            <option [ngValue]="1">Low</option>
+            <option [ngValue]="2">Medium</option>
+            <option [ngValue]="3">High</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Image URL (optional)</label>
+          <input
+            type="text"
+            name="imageBefore"
+            [(ngModel)]="formData.imageBefore"
+            placeholder="https://..."
+          />
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button type="submit" [disabled]="loading">
+          {{ loading ? 'Creating...' : 'Create Ticket' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
