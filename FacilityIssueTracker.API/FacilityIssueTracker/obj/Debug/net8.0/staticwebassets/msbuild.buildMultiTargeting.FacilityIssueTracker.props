@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="..\build\FacilityIssueTracker.props" />
-</Project>
