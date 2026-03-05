@@ -1,0 +1,68 @@
+<div class="my-ticket-page">
+  <div class="page-inner">
+    <div class="header-row">
+      <h2>My Tickets</h2>
+      <a routerLink="/tickets/create" class="create-link">+ Create Ticket</a>
+    </div>
+
+    <div class="filter-card">
+      <div class="filter-grid">
+        <input
+          type="text"
+          placeholder="Search title, description, location"
+          [(ngModel)]="filters.search"
+          (keyup.enter)="search()"
+        />
+
+        <select [(ngModel)]="filters.status" (ngModelChange)="onFilterChanged()">
+          <option value="">All status</option>
+          <option value="OPEN">OPEN</option>
+          <option value="ASSIGNED">ASSIGNED</option>
+          <option value="IN_PROGRESS">IN_PROGRESS</option>
+          <option value="RESOLVED">RESOLVED</option>
+          <option value="CLOSED">CLOSED</option>
+        </select>
+
+        <select [(ngModel)]="filters.priority" (ngModelChange)="onFilterChanged()">
+          <option [ngValue]="null">All priority</option>
+          <option [ngValue]="1">Low</option>
+          <option [ngValue]="2">Medium</option>
+          <option [ngValue]="3">High</option>
+        </select>
+
+        <select [(ngModel)]="filters.categoryId" (ngModelChange)="onFilterChanged()">
+          <option [ngValue]="null">All category</option>
+          <option *ngFor="let item of categories" [ngValue]="item.categoryId">{{ item.categoryName }}</option>
+        </select>
+      </div>
+
+      <div class="filter-actions">
+        <button class="btn-primary" (click)="search()">Search</button>
+        <button class="btn-secondary" (click)="resetFilters()">Reset</button>
+      </div>
+    </div>
+
+    <div class="ticket-list">
+      <div *ngIf="hasLoaded && tickets.length === 0" class="empty-state">No tickets found.</div>
+
+      <div class="ticket-card" *ngFor="let ticket of tickets">
+        <div class="ticket-top">
+          <h3>{{ ticket.title }}</h3>
+          <span class="status-chip">{{ ticket.status }}</span>
+        </div>
+
+        <p class="ticket-desc">{{ ticket.description }}</p>
+
+        <div class="meta-grid">
+          <div><strong>ID:</strong> #{{ ticket.ticketId }}</div>
+          <div><strong>Category:</strong> {{ ticket.categoryName }}</div>
+          <div><strong>Priority:</strong> {{ getPriorityLabel(ticket.priority) }}</div>
+          <div><strong>Location:</strong> {{ ticket.location }}</div>
+          <div><strong>Created:</strong> {{ ticket.createdAt | date:'dd/MM/yyyy HH:mm' }}</div>
+          <div><strong>Technician:</strong> {{ ticket.technicianName || 'Not assigned' }}</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
