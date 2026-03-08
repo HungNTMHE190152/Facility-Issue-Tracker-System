@@ -69,7 +69,7 @@ export class ChangePasswordComponent {
         // Tự động chuyển trang sau 1.8 giây
         setTimeout(() => {
           this.router.navigate(['/profile']);
-        }, 1800);
+        }, 1000);
       },
       error: (err) => {
         this.isLoading = false;
