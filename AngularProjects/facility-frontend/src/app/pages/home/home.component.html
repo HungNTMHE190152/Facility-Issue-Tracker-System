@@ -1,139 +1,116 @@
-<div class="home-container">
-    <!-- Navbar inside Home Page -->
-    <nav class="navbar">
-        <div class="navbar-container">
-            <div class="navbar-inner">
-                <!-- Logo -->
-                <a routerLink="/" class="logo-group">
-                    <div class="logo-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd"
-                                d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-                                clip-rule="evenodd" />
-                        </svg>
-                    </div>
-                    <span class="logo-text">Facility<span class="logo-highlight">Desk</span></span>
-                </a>
+<div class="home-wrapper">
+    <!-- Animated Background Elements -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+    <div class="grid-overlay"></div>
 
-                <!-- Desktop Menu -->
-                <div class="desktop-menu">
-                    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}"
-                        class="nav-link">Home</a>
-                    <a routerLink="/features" class="nav-link">Features</a>
-                    <a routerLink="/pricing" class="nav-link">Pricing</a>
+    <nav class="glass-nav">
+        <div class="nav-content">
+            <a routerLink="/" class="logo">
+                <div class="logo-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+                <span class="logo-text">Facility<span class="text-glow">Desk</span></span>
+            </a>
 
-                    <div class="auth-buttons">
+            <div class="nav-links">
+                <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}"
+                    class="nav-item">Home</a>
 
-    <!-- Nếu chưa login -->
-    <ng-container *ngIf="!isLoggedIn">
-        <a routerLink="/login" class="nav-link sign-in">Sign in</a>
-        <a routerLink="/register" class="btn-primary">Register</a>
-    </ng-container>
+                <div class="auth-section">
+                    <ng-container *ngIf="!isLoggedIn">
+                        <a routerLink="/login" class="nav-item login-btn">Sign in</a>
+                        <a routerLink="/register" class="btn-primary-glow">Get Started</a>
+                    </ng-container>
 
-    <!-- Nếu đã login -->
-    <ng-container *ngIf="isLoggedIn">
-        <span class="nav-link">👋 {{ userName }}</span>
-
-        <a routerLink="/tickets/create" class="nav-link">Create Ticket</a>
-        <a routerLink="/tickets/my" class="nav-link">My Tickets</a>
-        <a routerLink="/profile" class="nav-link">Profile</a>
-        <a routerLink="/change-password" class="nav-link">Change Password</a>
-
-        <button (click)="logout()" class="nav-link">Logout</button>
-    </ng-container>
-
-</div>
+                    <ng-container *ngIf="isLoggedIn">
+                        <span class="welcome-text">👋 {{ userName }}</span>
+                        <a routerLink="/tickets/my" class="nav-item">My Tickets</a>
+                        <a routerLink="/profile" class="nav-item">Profile</a>
+                        <button (click)="logout()" class="logout-btn">Logout</button>
+                    </ng-container>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- Hero Section -->
-    <header class="hero">
-        <div class="hero-bg-accent left-accent"></div>
-        <div class="hero-bg-accent right-accent"></div>
-
-        <div class="hero-content text-center">
-            <h1 class="hero-title">
-                Streamline your <span class="text-gradient">facility management</span>
-            </h1>
-            <p class="hero-subtitle">
-                The modern helpdesk solution for tracking, assigning, and resolving facility issues. Report broken
-                lights, internet outages, or plumbing problems in seconds.
-            </p>
-
-            <div class="hero-actions">
-                <a routerLink="/register" class="btn-primary btn-large cta-primary">
-                    Get started today
-                </a>
-                <a routerLink="/login" class="cta-secondary group">
-                    Log in to dashboard <span class="arrow transition-transform group-hover-translate-x">→</span>
-                </a>
-            </div>
-        </div>
-    </header>
-
-    <!-- Features Section -->
-    <section class="features">
-        <div class="features-container">
-            <div class="features-header text-center">
-                <h2 class="features-tagline">Faster Resolutions</h2>
-                <p class="features-title">Everything you need to run your facility</p>
-                <p class="features-subtitle">
-                    A complete toolkit for Students, Staff, Dispatchers, and Technicians to handle tickets from creation
-                    to resolution.
+    <main class="hero-section">
+        <div class="hero-container">
+            <div class="hero-text-content">
+                <div class="badge-wrapper animate-fade-in-up" style="animation-delay: 0.1s">
+                    <span class="badge">✨ The Future of Facility Management</span>
+                </div>
+                <h1 class="hero-title animate-fade-in-up" style="animation-delay: 0.2s">
+                    Manage Facilities with <br />
+                    <span class="gradient-text animated-gradient">Ultimate Precision.</span>
+                </h1>
+                <p class="hero-desc animate-fade-in-up" style="animation-delay: 0.3s">
+                    Experience a seamless, intelligent helpdesk solution. Track, assign, and resolve issues at lighting
+                    speed. Empower your team and keep your facilities running flawlessly.
                 </p>
+                <div class="hero-actions animate-fade-in-up" style="animation-delay: 0.4s">
+                    <a routerLink="/register" class="btn-primary-glow large">
+                        Start tracking now
+                        <svg class="arrow-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </a>
+                    <a routerLink="/login" class="btn-secondary-glass large group">
+                        Enter Dashboard
+                    </a>
+                </div>
             </div>
 
-            <div class="features-grid">
-                <!-- Feature 1 -->
-                <div class="feature-card">
-                    <div class="feature-icon bg-blue">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
+            <div class="hero-visual animate-fade-in-up" style="animation-delay: 0.5s">
+                <!-- Abstract visual representation of a dashboard/tickets -->
+                <div class="glass-card main-card floating">
+                    <div class="card-header">
+                        <div class="dots">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                        </div>
+                        <div class="card-title">Recent Tickets</div>
                     </div>
-                    <h3 class="feature-name">Easy Reporting</h3>
-                    <p class="feature-description">Report issues in seconds. Just select a category, write a quick
-                        description, and attach an image.</p>
+                    <div class="card-body">
+                        <div class="ticket-row pulse-anim" style="animation-delay: 0s">
+                            <div class="t-icon blue">🔧</div>
+                            <div class="t-info">
+                                <div class="t-line long"></div>
+                                <div class="t-line short"></div>
+                            </div>
+                            <div class="t-status open">Open</div>
+                        </div>
+                        <div class="ticket-row pulse-anim" style="animation-delay: 1.5s">
+                            <div class="t-icon purple">⚡</div>
+                            <div class="t-info">
+                                <div class="t-line long"></div>
+                                <div class="t-line short"></div>
+                            </div>
+                            <div class="t-status progress">In Progress</div>
+                        </div>
+                        <div class="ticket-row pulse-anim" style="animation-delay: 3s">
+                            <div class="t-icon green">💧</div>
+                            <div class="t-info">
+                                <div class="t-line long"></div>
+                                <div class="t-line short"></div>
+                            </div>
+                            <div class="t-status resolved">Resolved</div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Feature 2 -->
-                <div class="feature-card">
-                    <div class="feature-icon bg-orange">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
-                        </svg>
-                    </div>
-                    <h3 class="feature-name">Smart Triage</h3>
-                    <p class="feature-description">Dispatchers can view all OPEN tickets and assign them to the right
-                        technicians instantly based on categories.</p>
-                </div>
-
-                <!-- Feature 3 -->
-                <div class="feature-card">
-                    <div class="feature-icon bg-green">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <h3 class="feature-name">Track to Resolution</h3>
-                    <p class="feature-description">Technicians mark tasks as IN_PROGRESS or RESOLVED, and reporters can
-                        verify and rate the fix.</p>
+                <div class="glass-card stat-card floating-delayed">
+                    <div class="stat-icon">📈</div>
+                    <div class="stat-value">98%</div>
+                    <div class="stat-label">Resolution Rate</div>
                 </div>
             </div>
         </div>
-    </section>
-
-    <footer class="footer">
-        <div class="footer-content">
-            <p>&copy; 2026 FacilityDesk. All rights reserved.</p>
-        </div>
-    </footer>
+    </main>
 </div>

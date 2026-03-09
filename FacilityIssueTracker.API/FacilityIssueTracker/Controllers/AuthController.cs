@@ -1,5 +1,6 @@
 ﻿using FacilityIssueTracker.Models;
 using FacilityIssueTracker.DTOs;
+using FacilityIssueTracker.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,11 +13,13 @@ public class AuthController : ControllerBase
 {
     private readonly AssContext _context;
     private readonly JwtService _jwt;
+    private readonly IEmailService _emailService;
 
-    public AuthController(AssContext context, JwtService jwt)
+    public AuthController(AssContext context, JwtService jwt, IEmailService emailService)
     {
         _context = context;
         _jwt = jwt;
+        _emailService = emailService;
     }
 
     // ================= REGISTER =================
@@ -174,5 +177,52 @@ public class AuthController : ControllerBase
             fullName = user.FullName,
             role = (await _context.Roles.FindAsync(user.RoleId))?.RoleName ?? "Reporter"
         });
+    }
+
+    // ================= FORGOT PASSWORD =================
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordDTO dto)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        if (user == null)
+            return Ok(new { message = "Nếu email hợp lệ, mã OTP sẽ được gửi về hộp thư của bạn." });
+
+        var otp = new Random().Next(100000, 999999).ToString();
+        user.ResetPasswordOTP = otp;
+        user.ResetPasswordOTPExpiry = DateTime.UtcNow.AddMinutes(5);
+
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync();
+
+        // Log ra Console để test nhanh khi chưa có cấu hình Email thật
+        Console.WriteLine($"\n[DEBUG OTP] FOR EMAIL {dto.Email} IS: {otp}\n");
+
+        var subject = "Facility Issue Tracker - Mã lấy lại mật khẩu";
+        var body = $"<h3>Mã OTP của bạn là: <strong>{otp}</strong></h3><p>Mã này sẽ hết hạn trong 5 phút.</p>";
+        
+        // Chạy ngầm việc gửi email để không làm treo luồng request của người dùng (nếu host/port email sai)
+        _ = Task.Run(() => _emailService.SendEmailAsync(dto.Email, subject, body));
+
+        return Ok(new { message = "Nếu email hợp lệ, mã OTP sẽ được gửi về hộp thư của bạn." });
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordDTO dto)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        if (user == null)
+            return BadRequest(new { message = "Mã OTP không hợp lệ hoặc đã hết hạn." });
+
+        if (user.ResetPasswordOTP != dto.Otp || user.ResetPasswordOTPExpiry < DateTime.UtcNow)
+            return BadRequest(new { message = "Mã OTP không hợp lệ hoặc đã hết hạn." });
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        user.ResetPasswordOTP = null;
+        user.ResetPasswordOTPExpiry = null;
+
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Mật khẩu đã được đặt lại thành công." });
     }
 }

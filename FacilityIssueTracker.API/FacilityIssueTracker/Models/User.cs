@@ -24,4 +24,7 @@ public partial class User
     public virtual ICollection<Ticket> TicketReporters { get; set; } = new List<Ticket>();
 
     public virtual ICollection<Ticket> TicketTechnicians { get; set; } = new List<Ticket>();
+
+    public string? ResetPasswordOTP { get; set; }
+    public DateTime? ResetPasswordOTPExpiry { get; set; }
 }

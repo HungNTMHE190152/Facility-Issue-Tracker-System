@@ -1,4 +1,5 @@
 ﻿using FacilityIssueTracker.Models;
+using FacilityIssueTracker.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -60,6 +61,9 @@ builder.Services.AddDbContext<AssContext>(options =>
 
 // ================= JWT SERVICE =================
 builder.Services.AddScoped<JwtService>();
+
+// ================= EMAIL SERVICE =================
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
