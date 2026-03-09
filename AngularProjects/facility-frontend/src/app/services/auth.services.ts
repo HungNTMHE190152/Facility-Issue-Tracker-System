@@ -93,6 +93,14 @@ export class AuthService {
     return this.http.post(`${this.apiUrl}/change-password`, data);
   }
 
+  forgotPassword(email: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/forgot-password`, { email });
+  }
+
+  resetPassword(data: { email: string; otp: string; newPassword: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/reset-password`, data);
+  }
+
 
   /**
    * Cập nhật tên hiển thị (gọi sau khi PUT profile thành công)
