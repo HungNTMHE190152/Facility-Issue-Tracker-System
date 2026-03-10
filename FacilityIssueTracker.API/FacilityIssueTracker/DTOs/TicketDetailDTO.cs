@@ -1,6 +1,6 @@
 namespace FacilityIssueTracker.DTOs;
 
-public class MyTicketItemDTO
+public class TicketDetailDTO
 {
     public int TicketId { get; set; }
     public string Title { get; set; } = string.Empty;
@@ -16,6 +16,8 @@ public class MyTicketItemDTO
     public DateTime? ClosedAt { get; set; }
     public string? ImageBefore { get; set; }
     public string? ImageAfter { get; set; }
+    public int ReporterId { get; set; }
+    public string ReporterName { get; set; } = string.Empty;
+    public int? TechnicianId { get; set; }
     public string? TechnicianName { get; set; }
-    public string? ReporterName { get; set; }
 }

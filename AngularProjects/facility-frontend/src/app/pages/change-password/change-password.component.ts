@@ -43,7 +43,7 @@ export class ChangePasswordComponent {
       return;
     }
     if (newPass !== confirmPass) {
-      this.errorMessage = 'New password and accespt password do not match!!!';
+      this.errorMessage = 'New password and confirm password do not match!!!';
       return;
     }
     if (newPass.length < 6) {
@@ -60,13 +60,12 @@ export class ChangePasswordComponent {
       next: () => {
         this.isLoading = false;
         this.successMessage = 'Changed password successfully! Going back to profile...';
-        
+
         // Reset form
         this.currentPassword = '';
         this.newPassword = '';
         this.confirmNewPassword = '';
 
-        // Tự động chuyển trang sau 1.8 giây
         setTimeout(() => {
           this.router.navigate(['/profile']);
         }, 1000);
@@ -74,12 +73,12 @@ export class ChangePasswordComponent {
       error: (err) => {
         this.isLoading = false;
 
-        let msg = 'Changed password failed!!! Please try again.';
+        let msg = 'Change password failed!!! Please try again.';
 
         if (err.status === 400) {
           const backendErr = err.error;
           if (backendErr?.error?.toLowerCase().includes('wrong') || backendErr?.message?.toLowerCase().includes('wrong')) {
-            msg = 'Password is not correct.Please try again.';
+            msg = 'Password is not correct. Please try again.';
           } else if (typeof backendErr === 'string') {
             msg = backendErr;
           } else if (backendErr?.message) {
@@ -92,7 +91,7 @@ export class ChangePasswordComponent {
           this.auth.logout();
           setTimeout(() => this.router.navigate(['/login']), 2000);
         } else if (err.status === 0) {
-          msg = 'Do not connect to sever. Please check internet.';
+          msg = 'Cannot connect to server. Please check your internet connection.';
         }
 
         this.errorMessage = msg;

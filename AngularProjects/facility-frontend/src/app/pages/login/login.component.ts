@@ -25,15 +25,18 @@ export class LoginComponent implements OnInit {
     });
   }
 
-  onSubmit() {
-    if (!this.email || !this.password) {
+  onSubmit(htmlEmail?: string, htmlPassword?: string) {
+    const rawEmail = htmlEmail || this.email;
+    const rawPassword = htmlPassword || this.password;
+
+    if (!rawEmail || !rawPassword) {
       alert('Enter email and password');
       return;
     }
 
     const data = {
-      email: this.email.trim(),
-      password: this.password.trim()
+      email: rawEmail.trim(),
+      password: rawPassword.trim()
     };
 
     console.log('Sending login with: ', data); // debug
@@ -45,7 +48,13 @@ export class LoginComponent implements OnInit {
         // Kiểm tra xem backend có trả token không
         if (res && res.token) {
           console.log('Token saved successfully:', res.token);
-          this.router.navigate(['/']); // hoặc '/profile' tùy bạn
+
+          const role = res.role || localStorage.getItem('role') || '';
+          if (role.toLowerCase() === 'dispatcher') {
+            this.router.navigate(['/dispatcher-dashboard']);
+          } else {
+            this.router.navigate(['/']); // hoặc '/profile' tùy bạn
+          }
         } else {
           alert('Login successfully but do not receive a token from the server.');
         }

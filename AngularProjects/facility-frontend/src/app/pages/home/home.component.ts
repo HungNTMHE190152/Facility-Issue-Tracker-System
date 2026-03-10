@@ -14,6 +14,7 @@ import { Subscription } from 'rxjs';
 export class HomeComponent implements OnInit, OnDestroy {
 
   userName: string = 'Guest';
+  userRole: string = '';
   isLoggedIn: boolean = false;
 
   private subs: Subscription = new Subscription();
@@ -30,6 +31,12 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.subs.add(
       this.auth.userName$.subscribe(name => {
         this.userName = name || 'User';
+      })
+    );
+
+    this.subs.add(
+      this.auth.userRole$.subscribe(role => {
+        this.userRole = role || '';
       })
     );
   }

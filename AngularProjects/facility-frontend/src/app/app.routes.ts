@@ -9,5 +9,9 @@ export const routes: Routes = [
     { path: 'forgot-password', loadComponent: () => import('./pages/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent) },
     { path: 'tickets/create', loadComponent: () => import('./pages/create-ticket/create-ticket.component').then(m => m.CreateTicketComponent) },
     { path: 'tickets/my', loadComponent: () => import('./pages/my-tickets/my-tickets.component').then(m => m.MyTicketsComponent) },
+    { path: 'dispatcher-dashboard', loadComponent: () => import('./pages/dispatcher-dashboard/dispatcher-dashboard.component').then(m => m.DispatcherDashboardComponent) },
+    { path: 'user-management', loadComponent: () => import('./pages/user-management/user-management.component').then(m => m.UserManagementComponent) },
+    { path: 'ticket-management', loadComponent: () => import('./pages/ticket-management/ticket-management.component').then(m => m.TicketManagementComponent) },
+    { path: 'reset-password', loadComponent: () => import('./pages/reset-password/reset-password.component').then(m => m.ResetPasswordComponent) },
     { path: '**', redirectTo: '' }
 ];
