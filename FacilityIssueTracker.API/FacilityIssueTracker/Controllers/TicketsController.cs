@@ -130,4 +130,98 @@ public class TicketsController : ControllerBase
 
         return Ok(tickets);
     }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetTicketById(int id)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdClaim, out var reporterId))
+            return Unauthorized("Invalid token user information");
+
+        var ticket = await _context.Tickets
+            .AsNoTracking()
+            .Include(x => x.Category)
+            .Include(x => x.Technician)
+            .Where(x => x.TicketId == id && x.ReporterId == reporterId)
+            .Select(x => new MyTicketItemDTO
+            {
+                TicketId = x.TicketId,
+                Title = x.Title,
+                Description = x.Description,
+                Location = x.Location,
+                Priority = x.Priority,
+                Status = x.Status ?? "OPEN",
+                CategoryId = x.CategoryId,
+                CategoryName = x.Category.CategoryName,
+                CreatedAt = x.CreatedAt,
+                AssignedAt = x.AssignedAt,
+                ResolvedAt = x.ResolvedAt,
+                ClosedAt = x.ClosedAt,
+                ImageBefore = x.ImageBefore,
+                ImageAfter = x.ImageAfter,
+                TechnicianName = x.Technician != null ? x.Technician.FullName : null
+            })
+            .FirstOrDefaultAsync();
+
+        if (ticket == null)
+            return NotFound("Ticket not found");
+
+        return Ok(ticket);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateTicket(int id, [FromBody] UpdateTicketDTO dto)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdClaim, out var reporterId))
+            return Unauthorized("Invalid token user information");
+
+        var ticket = await _context.Tickets
+            .FirstOrDefaultAsync(x => x.TicketId == id && x.ReporterId == reporterId);
+
+        if (ticket == null)
+            return NotFound("Ticket not found");
+
+        if (ticket.Status?.ToUpper() == "CLOSED")
+            return BadRequest("Cannot update a closed ticket");
+
+        var categoryExists = await _context.Categories
+            .AnyAsync(x => x.CategoryId == dto.CategoryId);
+
+        if (!categoryExists)
+            return BadRequest("Category does not exist");
+
+        ticket.Title = dto.Title.Trim();
+        ticket.Description = dto.Description.Trim();
+        ticket.Location = dto.Location.Trim();
+        ticket.Priority = dto.Priority;
+        ticket.CategoryId = dto.CategoryId;
+        ticket.ImageBefore = string.IsNullOrWhiteSpace(dto.ImageBefore) ? null : dto.ImageBefore.Trim();
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Ticket updated successfully" });
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteTicket(int id)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdClaim, out var reporterId))
+            return Unauthorized("Invalid token user information");
+
+        var ticket = await _context.Tickets
+            .FirstOrDefaultAsync(x => x.TicketId == id && x.ReporterId == reporterId);
+
+        if (ticket == null)
+            return NotFound("Ticket not found");
+
+        if (ticket.Status?.ToUpper() == "CLOSED")
+            return BadRequest("Cannot delete a closed ticket");
+
+        _context.Tickets.Remove(ticket);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Ticket deleted successfully" });
+    }
 }

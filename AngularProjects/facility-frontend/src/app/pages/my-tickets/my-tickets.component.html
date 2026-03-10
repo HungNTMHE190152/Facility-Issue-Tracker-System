@@ -1,48 +1,23 @@
 <div class="my-ticket-page">
-  <!-- Animated Background Elements -->
-  <div class="bg-orb orb-1"></div>
-  <div class="bg-orb orb-2"></div>
-  <div class="bg-orb orb-3"></div>
-  <div class="grid-overlay"></div>
-
-  <!-- Navbar (Same as Home for consistency) -->
-  <nav class="glass-nav">
-    <div class="nav-content">
-      <a routerLink="/" class="logo">
-        <div class="logo-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <span class="logo-text">Facility<span class="text-glow">Desk</span></span>
-      </a>
-
-      <div class="nav-links">
-        <div class="auth-section">
-          <!-- User is guaranteed to be logged in on this page -->
-          <span class="welcome-text">👋 Welcome</span>
-          <a routerLink="/tickets/my" class="nav-item active">My Tickets</a>
-          <a routerLink="/profile" class="nav-item">Profile</a>
-        </div>
+  <div class="page-inner">
+    <div class="header-row">
+      <h2>My Tickets</h2>
+      <div class="header-actions">
+        <a routerLink="/" class="back-link">← Back</a>
+        <a routerLink="/tickets/create" class="create-link">+ Create Ticket</a>
       </div>
     </div>
-  </nav>
 
-  <main class="page-inner animate-fade-in-up">
-    <div class="header-row">
-      <h2 class="page-title">My Tickets</h2>
-      <a routerLink="/tickets/create" class="btn-primary-glow">
-        <span>+</span> Create Ticket
-      </a>
-    </div>
-
-    <!-- Filter Section (Glassmorphism) -->
-    <div class="glass-card filter-card">
+    <div class="filter-card">
       <div class="filter-grid">
-        <input type="text" class="dark-input" placeholder="Search title, description, location"
-          [(ngModel)]="filters.search" (keyup.enter)="search()" />
+        <input
+          type="text"
+          placeholder="Search title, description, location"
+          [(ngModel)]="filters.search"
+          (keyup.enter)="search()"
+        />
 
-        <select class="dark-input" [(ngModel)]="filters.status" (ngModelChange)="onFilterChanged()">
+        <select [(ngModel)]="filters.status" (ngModelChange)="onFilterChanged()">
           <option value="">All status</option>
           <option value="OPEN">OPEN</option>
           <option value="ASSIGNED">ASSIGNED</option>
@@ -51,61 +26,87 @@
           <option value="CLOSED">CLOSED</option>
         </select>
 
-        <select class="dark-input" [(ngModel)]="filters.priority" (ngModelChange)="onFilterChanged()">
+        <select [(ngModel)]="filters.priority" (ngModelChange)="onFilterChanged()">
           <option [ngValue]="null">All priority</option>
           <option [ngValue]="1">Low</option>
           <option [ngValue]="2">Medium</option>
           <option [ngValue]="3">High</option>
         </select>
 
-        <select class="dark-input" [(ngModel)]="filters.categoryId" (ngModelChange)="onFilterChanged()">
+        <select [(ngModel)]="filters.categoryId" (ngModelChange)="onFilterChanged()">
           <option [ngValue]="null">All category</option>
           <option *ngFor="let item of categories" [ngValue]="item.categoryId">{{ item.categoryName }}</option>
         </select>
       </div>
 
       <div class="filter-actions">
-        <button class="btn-primary-glow compact" (click)="search()">Search</button>
-        <button class="btn-secondary-glass compact" (click)="resetFilters()">Reset</button>
+        <button class="btn-primary" (click)="search()">Search</button>
+        <button class="btn-secondary" (click)="resetFilters()">Reset</button>
       </div>
     </div>
 
-    <!-- Ticket List -->
     <div class="ticket-list">
-      <div *ngIf="hasLoaded && tickets.length === 0" class="glass-card empty-state">
-        <div class="empty-icon">📁</div>
-        <p>No tickets found starting right now.</p>
-      </div>
+      <div *ngIf="hasLoaded && tickets.length === 0" class="empty-state">No tickets found.</div>
 
-      <div class="glass-card ticket-card" *ngFor="let ticket of tickets">
+      <div class="ticket-card" *ngFor="let ticket of pagedTickets">
         <div class="ticket-top">
-          <h3>{{ ticket.title }}</h3>
-          <span class="t-status" [ngClass]="ticket.status.toLowerCase()">{{ ticket.status }}</span>
+          <h3 [title]="ticket.title">{{ ticket.title }}</h3>
+          <span class="status-chip">{{ ticket.status }}</span>
         </div>
 
-        <p class="ticket-desc">{{ ticket.description }}</p>
+        <p class="ticket-desc" [title]="ticket.description">{{ ticket.description }}</p>
 
         <div class="meta-grid">
-          <div class="meta-item"><span class="meta-label">ID</span> #{{ ticket.ticketId }}</div>
-          <div class="meta-item"><span class="meta-label">Category</span> {{ ticket.categoryName }}</div>
-          <div class="meta-item"><span class="meta-label">Priority</span> {{ getPriorityLabel(ticket.priority) }}</div>
-          <div class="meta-item"><span class="meta-label">Location</span> {{ ticket.location }}</div>
-          <div class="meta-item"><span class="meta-label">Created</span> {{ ticket.createdAt | date:'dd/MM/yyyy HH:mm'
-            }}</div>
-          <div class="meta-item"><span class="meta-label">Technician</span> {{ ticket.technicianName || 'Not assigned'
-            }}</div>
+          <div><strong>ID:</strong> #{{ ticket.ticketId }}</div>
+          <div><strong>Category:</strong> {{ ticket.categoryName }}</div>
+          <div><strong>Priority:</strong> {{ getPriorityLabel(ticket.priority) }}</div>
+          <div><strong>Location:</strong> {{ ticket.location }}</div>
+          <div><strong>Created:</strong> {{ ticket.createdAt | date:'dd/MM/yyyy HH:mm' }}</div>
+          <div><strong>Technician:</strong> {{ ticket.technicianName || 'Not assigned' }}</div>
+        </div>
+
+        <div class="ticket-actions">
+          <button
+            class="btn-edit"
+            [disabled]="!isEditable(ticket)"
+            (click)="editTicket(ticket.ticketId)">
+            Edit
+          </button>
+          <button
+            class="btn-delete"
+            [disabled]="!isEditable(ticket)"
+            (click)="deleteTicket(ticket)">
+            Delete
+          </button>
+        </div>
+      </div>
+
+      <div class="pagination" *ngIf="tickets.length > pageSize">
+        <button class="page-btn" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">Prev</button>
+        <button
+          class="page-btn"
+          *ngFor="let page of pageNumbers"
+          [class.active]="page === currentPage"
+          (click)="goToPage(page)">
+          {{ page }}
+        </button>
+        <button class="page-btn" [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">Next</button>
+      </div>
+    </div>
+
+    <div class="popup-overlay" *ngIf="popupVisible">
+      <div class="popup-card" [class.success]="popupType === 'success'" [class.error]="popupType === 'error'" [class.warning]="popupType === 'warning'" [class.confirm]="popupType === 'confirm'">
+        <h3>{{ popupTitle }}</h3>
+        <p>{{ popupMessage }}</p>
+        <div class="popup-actions" *ngIf="popupType !== 'confirm'">
+          <button type="button" class="popup-ok" (click)="closePopup()">OK</button>
+        </div>
+        <div class="popup-actions" *ngIf="popupType === 'confirm'">
+          <button type="button" class="popup-cancel" (click)="closePopup()">Cancel</button>
+          <button type="button" class="popup-ok" (click)="confirmPopup()">Delete</button>
         </div>
       </div>
     </div>
 
-    <div class="bottom-actions">
-      <a routerLink="/" class="back-to-home">
-        <svg viewBox="0 0 24 24" fill="none" class="arrow-icon-back" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-        </svg>
-        Back to Home
-      </a>
-    </div>
-
-  </main>
+  </div>
 </div>

@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
-import { CategoryOption, CreateTicketRequest, MyTicketFilters, MyTicketItem } from '../models/ticket.models';
+import { CategoryOption, CreateTicketRequest, MyTicketFilters, MyTicketItem, UpdateTicketRequest } from '../models/ticket.models';
 
 @Injectable({
   providedIn: 'root'
@@ -53,5 +53,17 @@ export class TicketService {
         return [];
       })
     );
+  }
+
+  getTicketById(id: number): Observable<MyTicketItem> {
+    return this.http.get<MyTicketItem>(`${this.apiUrl}/${id}`);
+  }
+
+  updateTicket(id: number, data: UpdateTicketRequest): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(`${this.apiUrl}/${id}`, data);
+  }
+
+  deleteTicket(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`);
   }
 }
