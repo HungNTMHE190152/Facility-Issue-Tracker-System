@@ -1,97 +1,99 @@
-<div class="my-ticket-page">
-  <!-- Animated Background Elements -->
-  <div class="bg-orb orb-1"></div>
-  <div class="bg-orb orb-2"></div>
-  <div class="bg-orb orb-3"></div>
-  <div class="grid-overlay"></div>
-
-  <!-- Navbar -->
-  <nav class="glass-nav">
-    <div class="nav-content">
-      <a routerLink="/" class="logo">
-        <div class="logo-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <span class="logo-text">Facility<span class="text-glow">Desk</span></span>
-      </a>
-
-      <div class="nav-links">
-        <div class="auth-section">
-          <!-- User is guaranteed to be logged in on this page -->
-          <a routerLink="/tickets/my" class="nav-item">My Tickets</a>
-          <a routerLink="/profile" class="nav-item">Profile</a>
-        </div>
-      </div>
+<div class="ticket-page">
+  <div class="ticket-card">
+    <div class="header-row">
+      <h2>Create Ticket</h2>
+      <a routerLink="/my-ticket" class="back-link">← Back</a>
     </div>
-  </nav>
 
-  <main class="page-inner animate-fade-in-up">
-    <div class="glass-card form-card">
-      <div class="header-row">
-        <h2 class="page-title">Create Ticket</h2>
+    <form (ngSubmit)="submit()" class="ticket-form">
+      <div class="form-group">
+        <label>Title *</label>
+        <input
+          type="text"
+          name="title"
+          [(ngModel)]="formData.title"
+          maxlength="200"
+          placeholder="Short issue title"
+          required
+        />
       </div>
 
-      <form (ngSubmit)="submit()" class="ticket-form">
+      <div class="form-group">
+        <label>Description *</label>
+        <textarea
+          name="description"
+          [(ngModel)]="formData.description"
+          rows="4"
+          maxlength="1000"
+          placeholder="Describe the issue details"
+          required
+        ></textarea>
+      </div>
+
+      <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Title <span class="required">*</span></label>
-          <input type="text" class="dark-input" name="title" [(ngModel)]="formData.title" maxlength="200"
-            placeholder="Short issue title" required />
+          <label>Location *</label>
+          <input
+            type="text"
+            name="location"
+            [(ngModel)]="formData.location"
+            maxlength="100"
+            placeholder="Building/Floor/Room"
+            required
+          />
         </div>
 
         <div class="form-group">
-          <label class="form-label">Description <span class="required">*</span></label>
-          <textarea name="description" class="dark-input" [(ngModel)]="formData.description" rows="4"
-            placeholder="Describe the issue details" required></textarea>
+          <label>Category *</label>
+          <select name="categoryId" [(ngModel)]="formData.categoryId" required>
+            <option [ngValue]="0">Select category</option>
+            <option *ngFor="let item of categories" [ngValue]="item.categoryId">
+              {{ item.categoryName }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Priority</label>
+          <select name="priority" [(ngModel)]="formData.priority">
+            <option [ngValue]="1">Low</option>
+            <option [ngValue]="2">Medium</option>
+            <option [ngValue]="3">High</option>
+          </select>
         </div>
 
-        <div class="form-row grid-2">
-          <div class="form-group">
-            <label class="form-label">Location <span class="required">*</span></label>
-            <input type="text" class="dark-input" name="location" [(ngModel)]="formData.location" maxlength="100"
-              placeholder="Building/Floor/Room" required />
+        <div class="form-group">
+          <label>Image (optional, max 2MB)</label>
+          <input #imageInput type="file" accept="image/*" class="file-input-hidden" (change)="onImageSelected($event)" />
+          <div class="file-picker-row">
+            <button type="button" class="btn-file" (click)="imageInput.click()">Choose image</button>
+            <span class="file-name" [title]="selectedImageName || 'No file selected'">
+              {{ selectedImageName || 'No file selected' }}
+            </span>
           </div>
-
-          <div class="form-group">
-            <label class="form-label">Category <span class="required">*</span></label>
-            <div class="select-wrapper">
-              <select class="dark-input" name="categoryId" [(ngModel)]="formData.categoryId" required>
-                <option [ngValue]="0">Select category</option>
-                <option *ngFor="let item of categories" [ngValue]="item.categoryId">
-                  {{ item.categoryName }}
-                </option>
-              </select>
-            </div>
-          </div>
+          <img *ngIf="formData.imageBefore" [src]="formData.imageBefore" alt="Preview" class="image-preview" />
+          <button *ngIf="formData.imageBefore" type="button" class="btn-remove" (click)="clearImage(imageInput)">Remove image</button>
         </div>
+      </div>
 
-        <div class="form-row grid-2">
-          <div class="form-group">
-            <label class="form-label">Priority</label>
-            <div class="select-wrapper">
-              <select class="dark-input" name="priority" [(ngModel)]="formData.priority">
-                <option [ngValue]="1">Low</option>
-                <option [ngValue]="2">Medium</option>
-                <option [ngValue]="3">High</option>
-              </select>
-            </div>
-          </div>
+      <div class="action-row">
+        <a routerLink="/my-ticket" class="btn-back">Back</a>
+        <button type="submit" [disabled]="loading">
+          {{ loading ? 'Creating...' : 'Create Ticket' }}
+        </button>
+      </div>
+    </form>
+  </div>
 
-          <div class="form-group">
-            <label class="form-label">Image URL <span class="optional">(optional)</span></label>
-            <input type="text" class="dark-input" name="imageBefore" [(ngModel)]="formData.imageBefore"
-              placeholder="https://..." />
-          </div>
-        </div>
-
-        <div class="action-row">
-          <a routerLink="/tickets/my" class="btn-secondary-glass">Cancel</a>
-          <button type="submit" class="btn-primary-glow" [disabled]="loading">
-            {{ loading ? 'Creating...' : 'Submit Request' }}
-          </button>
-        </div>
-      </form>
+  <div class="popup-overlay" *ngIf="popupVisible">
+    <div class="popup-card" [class.success]="popupType === 'success'" [class.error]="popupType === 'error'" [class.warning]="popupType === 'warning'">
+      <h3>{{ popupTitle }}</h3>
+      <p>{{ popupMessage }}</p>
+      <div class="popup-actions">
+        <button type="button" class="popup-ok" (click)="closePopup()">OK</button>
+      </div>
     </div>
-  </main>
+  </div>
 </div>

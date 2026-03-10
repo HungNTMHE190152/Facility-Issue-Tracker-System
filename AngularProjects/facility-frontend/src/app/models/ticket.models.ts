@@ -12,6 +12,15 @@ export interface CreateTicketRequest {
   imageBefore?: string | null;
 }
 
+export interface UpdateTicketRequest {
+  title: string;
+  description: string;
+  location: string;
+  priority?: number | null;
+  categoryId: number;
+  imageBefore?: string | null;
+}
+
 export interface MyTicketItem {
   ticketId: number;
   title: string;

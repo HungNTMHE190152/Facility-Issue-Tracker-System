@@ -6,8 +6,8 @@ export const routes: Routes = [
     { path: 'register', loadComponent: () => import('./pages/register/register.component').then(m => m.RegisterComponent) },
     { path: 'profile', loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfileComponent) },
     { path: 'change-password', loadComponent: () => import('./pages/change-password/change-password.component').then(m => m.ChangePasswordComponent) },
-    { path: 'forgot-password', loadComponent: () => import('./pages/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent) },
     { path: 'tickets/create', loadComponent: () => import('./pages/create-ticket/create-ticket.component').then(m => m.CreateTicketComponent) },
-    { path: 'tickets/my', loadComponent: () => import('./pages/my-tickets/my-tickets.component').then(m => m.MyTicketsComponent) },
+    { path: 'my-ticket', loadComponent: () => import('./pages/my-tickets/my-tickets.component').then(m => m.MyTicketsComponent) },
+    { path: 'tickets/edit/:id', loadComponent: () => import('./pages/edit-ticket/edit-ticket.component').then(m => m.EditTicketComponent) },
     { path: '**', redirectTo: '' }
 ];
