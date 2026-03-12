@@ -37,6 +37,8 @@ export interface MyTicketItem {
   imageBefore?: string | null;
   imageAfter?: string | null;
   technicianName?: string | null;
+  technicianId?: number | null;
+  reporterName?: string | null;
 }
 
 export interface MyTicketFilters {

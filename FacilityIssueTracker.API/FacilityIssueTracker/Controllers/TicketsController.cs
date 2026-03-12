@@ -124,25 +124,49 @@ public class TicketsController : ControllerBase
                 ClosedAt = x.ClosedAt,
                 ImageBefore = x.ImageBefore,
                 ImageAfter = x.ImageAfter,
-                TechnicianName = x.Technician != null ? x.Technician.FullName : null
+                TechnicianName = x.Technician != null ? x.Technician.FullName : null,
+                ReporterName = x.Reporter != null ? x.Reporter.FullName : null
             })
             .ToListAsync();
 
         return Ok(tickets);
     }
 
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetTicketById(int id)
+    [HttpGet("all")]
+    [Authorize(Roles = "Dispatcher, Admin")]
+    public async Task<IActionResult> GetAllTickets([FromQuery] string? search, [FromQuery] string? status,
+        [FromQuery] int? priority, [FromQuery] int? categoryId)
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdClaim, out var reporterId))
-            return Unauthorized("Invalid token user information");
-
-        var ticket = await _context.Tickets
+        var query = _context.Tickets
             .AsNoTracking()
             .Include(x => x.Category)
             .Include(x => x.Technician)
-            .Where(x => x.TicketId == id && x.ReporterId == reporterId)
+            .Include(x => x.Reporter)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var keyword = search.Trim();
+            query = query.Where(x =>
+                x.Title.Contains(keyword) ||
+                x.Description.Contains(keyword) ||
+                x.Location.Contains(keyword));
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            var normalizedStatus = status.Trim().ToUpper();
+            query = query.Where(x => x.Status != null && x.Status.ToUpper() == normalizedStatus);
+        }
+
+        if (priority.HasValue)
+            query = query.Where(x => x.Priority == priority.Value);
+
+        if (categoryId.HasValue)
+            query = query.Where(x => x.CategoryId == categoryId.Value);
+
+        var tickets = await query
+            .OrderByDescending(x => x.CreatedAt)
             .Select(x => new MyTicketItemDTO
             {
                 TicketId = x.TicketId,
@@ -152,72 +176,173 @@ public class TicketsController : ControllerBase
                 Priority = x.Priority,
                 Status = x.Status ?? "OPEN",
                 CategoryId = x.CategoryId,
-                CategoryName = x.Category.CategoryName,
+                CategoryName = x.Category != null ? x.Category.CategoryName : string.Empty,
                 CreatedAt = x.CreatedAt,
                 AssignedAt = x.AssignedAt,
                 ResolvedAt = x.ResolvedAt,
                 ClosedAt = x.ClosedAt,
                 ImageBefore = x.ImageBefore,
                 ImageAfter = x.ImageAfter,
-                TechnicianName = x.Technician != null ? x.Technician.FullName : null
+                TechnicianName = x.Technician != null ? x.Technician.FullName : null,
+                ReporterName = x.Reporter != null ? x.Reporter.FullName : null
             })
-            .FirstOrDefaultAsync();
+            .ToListAsync();
+
+        return Ok(tickets);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetTicketById(int id)
+    {
+        var ticket = await _context.Tickets
+            .AsNoTracking()
+            .Include(x => x.Category)
+            .Include(x => x.Technician)
+            .Include(x => x.Reporter)
+            .FirstOrDefaultAsync(x => x.TicketId == id);
 
         if (ticket == null)
-            return NotFound("Ticket not found");
+            return NotFound(new { message = "Ticket not found" });
 
-        return Ok(ticket);
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        bool isDispatcherOrAdmin = User.IsInRole("Dispatcher") || User.IsInRole("Admin");
+
+        if (!isDispatcherOrAdmin && ticket.ReporterId.ToString() != userIdClaim && ticket.TechnicianId.ToString() != userIdClaim)
+        {
+            return Forbid();
+        }
+
+        var dto = new TicketDetailDTO
+        {
+            TicketId = ticket.TicketId,
+            Title = ticket.Title,
+            Description = ticket.Description,
+            Location = ticket.Location,
+            Priority = ticket.Priority,
+            Status = ticket.Status ?? "OPEN",
+            CategoryId = ticket.CategoryId,
+            CategoryName = ticket.Category?.CategoryName ?? string.Empty,
+            CreatedAt = ticket.CreatedAt,
+            AssignedAt = ticket.AssignedAt,
+            ResolvedAt = ticket.ResolvedAt,
+            ClosedAt = ticket.ClosedAt,
+            ImageBefore = ticket.ImageBefore,
+            ImageAfter = ticket.ImageAfter,
+            ReporterId = ticket.ReporterId,
+            ReporterName = ticket.Reporter?.FullName ?? string.Empty,
+            TechnicianId = ticket.TechnicianId,
+            TechnicianName = ticket.Technician?.FullName
+        };
+
+        return Ok(dto);
     }
 
     [HttpPut("{id}")]
+    [Authorize]
     public async Task<IActionResult> UpdateTicket(int id, [FromBody] UpdateTicketDTO dto)
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdClaim, out var reporterId))
-            return Unauthorized("Invalid token user information");
+        var ticket = await _context.Tickets.FirstOrDefaultAsync(x => x.TicketId == id);
+        if (ticket == null) return NotFound(new { message = "Ticket not found" });
 
-        var ticket = await _context.Tickets
-            .FirstOrDefaultAsync(x => x.TicketId == id && x.ReporterId == reporterId);
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        bool isDispatcherOrAdmin = User.IsInRole("Dispatcher") || User.IsInRole("Admin");
 
-        if (ticket == null)
-            return NotFound("Ticket not found");
+        // Nếu là Reporter thì chỉ sửa được vé của chính mình, VÀ chỉ khi vé đang ở mức OPEN
+        if (!isDispatcherOrAdmin)
+        {
+            if (ticket.ReporterId.ToString() != userIdStr)
+                return Forbid();
+            if (ticket.Status != null && ticket.Status.ToUpper() != "OPEN")
+                return Forbid(); // Tránh Reporter sửa vé đã tiếp nhận
+        }
 
-        if (ticket.Status?.ToUpper() == "CLOSED")
-            return BadRequest("Cannot update a closed ticket");
+        if (int.TryParse(userIdStr, out var currentUserId) && isDispatcherOrAdmin)
+        {
+            ticket.DispatcherId = currentUserId;
+        }
 
-        var categoryExists = await _context.Categories
-            .AnyAsync(x => x.CategoryId == dto.CategoryId);
+        if (dto.CategoryId.HasValue)
+        {
+            var categoryExists = await _context.Categories.AnyAsync(x => x.CategoryId == dto.CategoryId.Value);
+            if (!categoryExists) return BadRequest(new { message = "Category does not exist" });
+            ticket.CategoryId = dto.CategoryId.Value;
+        }
 
-        if (!categoryExists)
-            return BadRequest("Category does not exist");
+        if (dto.Priority.HasValue)
+            ticket.Priority = dto.Priority.Value;
 
-        ticket.Title = dto.Title.Trim();
-        ticket.Description = dto.Description.Trim();
-        ticket.Location = dto.Location.Trim();
-        ticket.Priority = dto.Priority;
-        ticket.CategoryId = dto.CategoryId;
-        ticket.ImageBefore = string.IsNullOrWhiteSpace(dto.ImageBefore) ? null : dto.ImageBefore.Trim();
+        if (!string.IsNullOrWhiteSpace(dto.Status))
+        {
+            ticket.Status = dto.Status.Trim().ToUpper();
+            if (ticket.Status == "ASSIGNED" && ticket.AssignedAt == null)
+                ticket.AssignedAt = DateTime.Now;
+            if (ticket.Status == "RESOLVED" && ticket.ResolvedAt == null)
+                ticket.ResolvedAt = DateTime.Now;
+            if (ticket.Status == "CLOSED" && ticket.ClosedAt == null)
+                ticket.ClosedAt = DateTime.Now;
+        }
 
+        if (dto.TechnicianId.HasValue)
+        {
+            if (dto.TechnicianId.Value <= 0) 
+            {
+                ticket.TechnicianId = null;
+            }
+            else
+            {
+                var techExists = await _context.Users.Include(u => u.Role).AnyAsync(x => x.UserId == dto.TechnicianId.Value && x.Role.RoleName == "Technician");
+                if (!techExists) return BadRequest(new { message = "Technician does not exist or invalid role" });
+                ticket.TechnicianId = dto.TechnicianId.Value;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(dto.Title))
+            ticket.Title = dto.Title.Trim();
+            
+        if (!string.IsNullOrWhiteSpace(dto.Description))
+            ticket.Description = dto.Description.Trim();
+            
+        if (!string.IsNullOrWhiteSpace(dto.Location))
+            ticket.Location = dto.Location.Trim();
+
+        _context.Tickets.Update(ticket);
         await _context.SaveChangesAsync();
 
         return Ok(new { message = "Ticket updated successfully" });
     }
 
     [HttpDelete("{id}")]
+    [Authorize]
     public async Task<IActionResult> DeleteTicket(int id)
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdClaim, out var reporterId))
-            return Unauthorized("Invalid token user information");
-
         var ticket = await _context.Tickets
-            .FirstOrDefaultAsync(x => x.TicketId == id && x.ReporterId == reporterId);
+            .Include(t => t.TicketHistories)
+            .Include(t => t.TicketSupplies)
+            .FirstOrDefaultAsync(x => x.TicketId == id);
+            
+        if (ticket == null) return NotFound(new { message = "Ticket not found" });
 
-        if (ticket == null)
-            return NotFound("Ticket not found");
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        bool isDispatcherOrAdmin = User.IsInRole("Dispatcher") || User.IsInRole("Admin");
 
-        if (ticket.Status?.ToUpper() == "CLOSED")
-            return BadRequest("Cannot delete a closed ticket");
+        if (!isDispatcherOrAdmin)
+        {
+            if (ticket.ReporterId.ToString() != userIdStr)
+                return Forbid();
+            if (ticket.Status != null && ticket.Status.ToUpper() != "OPEN")
+                return Forbid();
+        }
+
+        if (ticket.TicketHistories.Any())
+            _context.TicketHistories.RemoveRange(ticket.TicketHistories);
+            
+        if (ticket.TicketSupplies.Any())
+            _context.TicketSupplies.RemoveRange(ticket.TicketSupplies);
+
+        var review = await _context.Reviews.FirstOrDefaultAsync(r => r.TicketId == id);
+        if (review != null)
+            _context.Reviews.Remove(review);
 
         _context.Tickets.Remove(ticket);
         await _context.SaveChangesAsync();

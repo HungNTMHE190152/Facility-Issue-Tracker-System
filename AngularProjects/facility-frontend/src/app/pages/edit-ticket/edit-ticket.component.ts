@@ -238,7 +238,7 @@ export class EditTicketComponent implements OnInit {
 		.subscribe({
 			next: () => {
 				this.showPopup('Success', 'Ticket updated successfully', 'success', () => {
-					  this.router.navigate(['/my-ticket']);
+					  this.router.navigate(['/tickets/my']);
 				});
 			},
 			error: (err) => {

@@ -196,7 +196,7 @@ export class CreateTicketComponent implements OnInit {
     .subscribe({
       next: () => {
         this.showPopup('Success', 'Create ticket successfully', 'success', () => {
-          this.router.navigate(['/my-ticket']);
+          this.router.navigate(['/tickets/my']);
         });
       },
       error: (err) => {

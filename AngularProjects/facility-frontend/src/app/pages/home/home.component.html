@@ -28,7 +28,9 @@
 
                     <ng-container *ngIf="isLoggedIn">
                         <span class="welcome-text">👋 {{ userName }}</span>
-                            <a routerLink="/my-ticket" class="nav-item">My Tickets</a>
+                        <a *ngIf="userRole.toLowerCase() === 'dispatcher'" routerLink="/dispatcher-dashboard"
+                            class="nav-item">Manager</a>
+                        <a routerLink="/tickets/my" class="nav-item">My Tickets</a>
                         <a routerLink="/profile" class="nav-item">Profile</a>
                         <button (click)="logout()" class="logout-btn">Logout</button>
                     </ng-container>

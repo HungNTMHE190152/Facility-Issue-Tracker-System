@@ -4,23 +4,12 @@ namespace FacilityIssueTracker.DTOs;
 
 public class UpdateTicketDTO
 {
-	[Required]
-	[MaxLength(200)]
-	public string Title { get; set; } = string.Empty;
-
-	[Required]
-	[MaxLength(1000)]
-	public string Description { get; set; } = string.Empty;
-
-	[Required]
-	[MaxLength(100)]
-	public string Location { get; set; } = string.Empty;
-
-	public int? Priority { get; set; }
-
-	[Required]
-	public int CategoryId { get; set; }
-
-	[MaxLength(2000000)]
-	public string? ImageBefore { get; set; }
+    public string? Status { get; set; }
+    public int? Priority { get; set; }
+    public int? CategoryId { get; set; }
+    public int? TechnicianId { get; set; }
+    public string? Title { get; set; }
+    public string? Description { get; set; }
+    public string? Location { get; set; }
+    public string? ImageBefore { get; set; }
 }

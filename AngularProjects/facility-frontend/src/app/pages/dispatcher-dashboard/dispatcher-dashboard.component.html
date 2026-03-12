@@ -1,0 +1,74 @@
+<div class="dashboard-wrapper">
+    <!-- Dynamic Light Orbs -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+    <div class="grid-overlay"></div>
+
+    <div class="content-z-index">
+        <!-- Header -->
+        <header class="glass-nav">
+            <div class="nav-content">
+                <div class="logo">
+                     <div class="logo-box">
+                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                         </svg>
+                     </div>
+                     <span class="logo-text text-glow">Dispatcher Portal</span>
+                </div>
+                <div class="user-info">
+                     <button class="logout-btn" (click)="goHome()">
+                          <i class="fas fa-home"></i> Home
+                     </button>
+                     <span class="welcome-text">Welcome, {{ userName }}</span>
+                     <button class="logout-btn" (click)="logout()">
+                          <i class="fas fa-sign-out-alt"></i> Logout
+                     </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard-main page-inner">
+             <div class="welcome-section animate-fade-in-up">
+                  <h1 class="page-title gradient-text animated-gradient">Dispatcher Dashboard</h1>
+                  <p class="hero-desc">Manage the system, assign work, and track the status of support requests.</p>
+             </div>
+
+             <!-- Action Cards -->
+             <div class="cards-grid">
+                 <!-- User Management Card -->
+                 <div class="glass-card action-card floating">
+                     <div class="card-icon blue-icon">
+                         <i class="fas fa-users-cog"></i>
+                     </div>
+                     <div class="card-content">
+                         <h3>User Management</h3>
+                         <p>View, add, edit, or manage user roles in the system.</p>
+                     </div>
+                     <div class="card-action">
+                         <button class="btn-primary-glow" routerLink="/user-management">
+                             Access <i class="fas fa-arrow-right arrow-icon"></i>
+                         </button>
+                     </div>
+                 </div>
+
+                 <!-- Ticket Management Card -->
+                 <div class="glass-card action-card floating-delayed">
+                     <div class="card-icon purple-icon">
+                         <i class="fas fa-clipboard-list"></i>
+                     </div>
+                     <div class="card-content">
+                         <h3>Ticket Management</h3>
+                         <p>View all requests, assign to technicians, and update statuses.</p>
+                     </div>
+                     <div class="card-action">
+                         <button class="btn-primary-glow" routerLink="/ticket-management">
+                             Access <i class="fas fa-arrow-right arrow-icon"></i>
+                         </button>
+                     </div>
+                 </div>
+             </div>
+        </main>
+    </div>
+</div>

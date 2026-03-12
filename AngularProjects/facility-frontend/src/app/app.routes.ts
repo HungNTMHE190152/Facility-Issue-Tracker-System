@@ -7,7 +7,11 @@ export const routes: Routes = [
     { path: 'profile', loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfileComponent) },
     { path: 'change-password', loadComponent: () => import('./pages/change-password/change-password.component').then(m => m.ChangePasswordComponent) },
     { path: 'tickets/create', loadComponent: () => import('./pages/create-ticket/create-ticket.component').then(m => m.CreateTicketComponent) },
-    { path: 'my-ticket', loadComponent: () => import('./pages/my-tickets/my-tickets.component').then(m => m.MyTicketsComponent) },
+    { path: 'tickets/my', loadComponent: () => import('./pages/my-tickets/my-tickets.component').then(m => m.MyTicketsComponent) },
+    { path: 'dispatcher-dashboard', loadComponent: () => import('./pages/dispatcher-dashboard/dispatcher-dashboard.component').then(m => m.DispatcherDashboardComponent) },
+    { path: 'user-management', loadComponent: () => import('./pages/user-management/user-management.component').then(m => m.UserManagementComponent) },
+    { path: 'ticket-management', loadComponent: () => import('./pages/ticket-management/ticket-management.component').then(m => m.TicketManagementComponent) },
+    { path: 'reset-password', loadComponent: () => import('./pages/reset-password/reset-password.component').then(m => m.ResetPasswordComponent) },
     { path: 'tickets/edit/:id', loadComponent: () => import('./pages/edit-ticket/edit-ticket.component').then(m => m.EditTicketComponent) },
     { path: '**', redirectTo: '' }
 ];

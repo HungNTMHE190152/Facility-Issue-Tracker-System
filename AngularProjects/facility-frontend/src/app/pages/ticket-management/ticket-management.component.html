@@ -1,0 +1,286 @@
+<div class="my-ticket-page">
+  <!-- Animated Background Elements -->
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+  <div class="grid-overlay"></div>
+
+  <!-- Navbar -->
+  <nav class="glass-nav">
+    <div class="nav-content">
+      <a routerLink="/dispatcher-dashboard" class="logo">
+        <div class="logo-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <span class="logo-text">Dispatcher <span class="text-glow">Portal</span></span>
+      </a>
+
+      <div class="nav-links">
+        <div class="auth-section">
+          <a routerLink="/dispatcher-dashboard" class="nav-item">Manager</a>
+          <a routerLink="/ticket-management" class="nav-item active">All Tickets</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="page-inner animate-fade-in-up">
+    <div class="header-row">
+      <h2 class="page-title">Ticket Management</h2>
+    </div>
+
+    <!-- Display alert message if any -->
+    <div *ngIf="alertMessage" class="alert" [ngClass]="{'alert-error': isError, 'alert-success': !isError}" style="margin-bottom: 2rem;">
+        {{ alertMessage }}
+    </div>
+
+    <!-- Filter Section (Glassmorphism) -->
+    <div class="glass-card filter-card">
+      <div class="filter-grid">
+        <input type="text" class="dark-input" placeholder="Search title, description, location"
+          [(ngModel)]="filters.search" (keyup.enter)="search()" />
+
+        <select class="dark-input" [(ngModel)]="filters.status" (ngModelChange)="onFilterChanged()">
+          <option value="">All status</option>
+          <option value="OPEN">OPEN</option>
+          <option value="ASSIGNED">ASSIGNED</option>
+          <option value="IN_PROGRESS">IN_PROGRESS</option>
+          <option value="RESOLVED">RESOLVED</option>
+          <option value="CLOSED">CLOSED</option>
+        </select>
+
+        <select class="dark-input" [(ngModel)]="filters.priority" (ngModelChange)="onFilterChanged()">
+          <option [ngValue]="null">All priority</option>
+          <option [ngValue]="1">Low</option>
+          <option [ngValue]="2">Medium</option>
+          <option [ngValue]="3">High</option>
+        </select>
+
+        <select class="dark-input" [(ngModel)]="filters.categoryId" (ngModelChange)="onFilterChanged()">
+          <option [ngValue]="null">All category</option>
+          <option *ngFor="let item of categories" [ngValue]="item.categoryId">{{ item.categoryName }}</option>
+        </select>
+      </div>
+
+      <div class="filter-actions">
+        <button class="btn-primary-glow compact" (click)="search()">Search</button>
+        <button class="btn-secondary-glass compact" (click)="resetFilters()">Reset</button>
+      </div>
+    </div>
+
+    <!-- Ticket List -->
+    <div class="ticket-list">
+      <div *ngIf="hasLoaded && tickets.length === 0" class="glass-card empty-state">
+        <div class="empty-icon">📁</div>
+        <p>No tickets found in the system.</p>
+      </div>
+
+      <div class="glass-card ticket-card" *ngFor="let ticket of tickets">
+        <div class="ticket-top">
+          <h3 [title]="ticket.title">{{ truncateText(ticket.title, 20) }}</h3>
+          <span class="t-status" [ngClass]="ticket.status.toLowerCase()">{{ ticket.status }}</span>
+        </div>
+
+        <p class="ticket-desc" [title]="ticket.description">{{ truncateText(ticket.description, 20) }}</p>
+
+        <div class="meta-grid">
+          <div class="meta-item"><span class="meta-label">ID</span> #{{ ticket.ticketId }}</div>
+          <div class="meta-item"><span class="meta-label">Category</span> {{ ticket.categoryName }}</div>
+          <div class="meta-item"><span class="meta-label">Priority</span> {{ getPriorityLabel(ticket.priority) }}</div>
+          <div class="meta-item"><span class="meta-label">Location</span> {{ ticket.location }}</div>
+          <div class="meta-item"><span class="meta-label">Reporter</span> {{ ticket.reporterName || 'Unknown' }}</div>
+          <div class="meta-item"><span class="meta-label">Technician</span> {{ ticket.technicianName || 'Not assigned' }}</div>
+          <div class="meta-item"><span class="meta-label">Created</span> {{ ticket.createdAt | date:'dd/MM/yyyy HH:mm' }}</div>
+          <div class="meta-item" *ngIf="ticket.timeLeftStr" [ngClass]="{'pulse-danger': ticket.isOverdue}">
+              <span class="meta-label"><svg style="width: 14px; height: 14px; display: inline-block; vertical-align: text-bottom; margin-right: 2px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Time Left</span>
+              <span [ngStyle]="{'color': ticket.isOverdue ? '#ef4444' : '#eab308', 'font-weight': '700'}">{{ ticket.timeLeftStr }}</span>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button class="btn-icon-action btn-view" title="View Detail" (click)="openViewModal(ticket)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+          <button class="btn-icon-action btn-edit" title="Edit/Assign" (click)="openEditModal(ticket)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+          <button class="btn-icon-action btn-delete" title="Delete" (click)="openDeleteModal(ticket)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-actions">
+      <a routerLink="/dispatcher-dashboard" class="back-to-home">
+        <svg viewBox="0 0 24 24" fill="none" class="arrow-icon-back" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Dashboard
+      </a>
+    </div>
+
+  </main>
+</div>
+
+<!-- View Modal -->
+<div class="modal-backdrop" *ngIf="showViewModal" (click)="closeModals()">
+  <div class="modal-content large-modal glass-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Ticket Details</h3>
+      <button class="close-btn" (click)="closeModals()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    
+    <div class="modal-body" *ngIf="currentDetail">
+      <div class="detail-grid">
+        <div class="detail-item detail-full">
+          <label>Title</label>
+          <span>{{ currentDetail.title }}</span>
+        </div>
+        <div class="detail-item detail-full">
+          <label>Description</label>
+          <span>{{ currentDetail.description }}</span>
+        </div>
+        <div class="detail-item">
+          <label>ID</label>
+          <span>#{{ currentDetail.ticketId }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Status</label>
+          <span class="t-status" [ngClass]="currentDetail.status.toLowerCase()">{{ currentDetail.status }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Category</label>
+          <span>{{ currentDetail.categoryName }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Priority</label>
+          <span>{{ getPriorityLabel(currentDetail.priority) }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Location</label>
+          <span>{{ currentDetail.location }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Reporter</label>
+          <span>{{ currentDetail.reporterName || 'Unknown' }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Technician</label>
+          <span>{{ currentDetail.technicianName || 'Not assigned' }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Created At</label>
+          <span>{{ currentDetail.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+        <div class="detail-item" *ngIf="currentDetail.timeLeftStr" [ngClass]="{'pulse-bg-danger': currentDetail.isOverdue}">
+          <label><svg style="width: 16px; height: 16px; display: inline-block; vertical-align: text-bottom; margin-right: 2px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Time Left</label>
+          <span [ngStyle]="{'color': currentDetail.isOverdue ? '#ef4444' : '#eab308', 'font-weight': '800', 'font-size': '1.1rem'}">{{ currentDetail.timeLeftStr }}</span>
+        </div>
+        <div class="detail-item detail-full" *ngIf="currentDetail.imageBefore">
+           <label>Image Before</label>
+           <img [src]="'http://localhost:5207' + currentDetail.imageBefore" class="detail-image" alt="Image Before" (error)="onImageError($event)">
+        </div>
+        <div class="detail-item detail-full" *ngIf="currentDetail.imageAfter">
+           <label>Image After</label>
+           <img [src]="'http://localhost:5207' + currentDetail.imageAfter" class="detail-image" alt="Image After" (error)="onImageError($event)">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-backdrop" *ngIf="showEditModal" (click)="closeModals()">
+  <div class="modal-content glass-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Edit & Assign Ticket</h3>
+      <button class="close-btn" (click)="closeModals()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body" *ngIf="editData">
+        <div class="form-group">
+            <label>Status</label>
+            <select [(ngModel)]="editData.status" class="glass-input select-input">
+                <option value="OPEN">OPEN</option>
+                <option value="ASSIGNED">ASSIGNED</option>
+                <option value="IN_PROGRESS">IN_PROGRESS</option>
+                <option value="RESOLVED">RESOLVED</option>
+                <option value="CLOSED">CLOSED</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Priority</label>
+            <select [(ngModel)]="editData.priority" class="glass-input select-input">
+                <option [ngValue]="1">Low</option>
+                <option [ngValue]="2">Medium</option>
+                <option [ngValue]="3">High</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Category</label>
+            <select [(ngModel)]="editData.categoryId" class="glass-input select-input">
+                <option *ngFor="let cat of categories" [ngValue]="cat.categoryId">{{ cat.categoryName }}</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Assign Technician</label>
+            <select [(ngModel)]="editData.technicianId" class="glass-input select-input">
+                <option [ngValue]="0">--- Unassigned ---</option>
+                <option *ngFor="let tech of technicians" [ngValue]="tech.userId">{{ tech.fullName }} ({{tech.email}})</option>
+            </select>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn-secondary-glass compact" (click)="closeModals()">Cancel</button>
+        <button class="btn-primary-glow compact" (click)="submitEdit()" [disabled]="isLoading">
+            {{ isLoading ? 'Saving...' : 'Save Changes' }}
+        </button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div class="modal-backdrop" *ngIf="showDeleteModal" (click)="closeModals()">
+  <div class="modal-content confirm-modal glass-card" (click)="$event.stopPropagation()">
+    <div class="modal-header confirm-header">
+      <h3>Confirm Delete</h3>
+      <button class="close-btn" (click)="closeModals()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body confirm-body">
+      <div class="confirm-icon-wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" class="confirm-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+      <p>Are you sure you want to delete ticket <strong class="text-white">#{{ ticketToDelete?.ticketId }}</strong>?</p>
+      <p class="text-danger-small">This will permanently delete the ticket, its history, and supply data.</p>
+    </div>
+    <div class="modal-footer" style="justify-content: center;">
+      <button class="btn-secondary-glass compact" (click)="closeModals()">Cancel</button>
+      <button class="btn-danger" (click)="confirmDelete()" [disabled]="isLoading">
+        {{ isLoading ? 'Deleting...' : 'Confirm Delete' }}
+      </button>
+    </div>
+  </div>
+</div>
