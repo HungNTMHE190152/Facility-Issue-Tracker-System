@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace FacilityIssueTracker.DTOs;
 
 public class UpdateTicketDTO
@@ -9,4 +11,5 @@ public class UpdateTicketDTO
     public string? Title { get; set; }
     public string? Description { get; set; }
     public string? Location { get; set; }
+    public string? ImageBefore { get; set; }
 }

@@ -5,7 +5,7 @@
   <div class="bg-orb orb-3"></div>
   <div class="grid-overlay"></div>
 
-  <!-- Navbar (Same as Home for consistency) -->
+  <!-- Navbar -->
   <div class="alert-toast" *ngIf="alertMessage" [ngClass]="{'error': isError}">
     {{ alertMessage }}
   </div>
@@ -23,10 +23,8 @@
 
       <div class="nav-links">
         <div class="auth-section">
-          <!-- User is guaranteed to be logged in on this page -->
-          <span class="welcome-text">👋 Welcome</span>
           <a routerLink="/tickets/my" class="nav-item active">My Tickets</a>
-          <a routerLink="/profile" class="nav-item">Profile</a>
+          <a routerLink="/tickets/create" class="btn-primary-glow compact">+ Create</a>
         </div>
       </div>
     </div>
@@ -34,17 +32,26 @@
 
   <main class="page-inner animate-fade-in-up">
     <div class="header-row">
-      <h2 class="page-title">My Tickets</h2>
-      <a routerLink="/tickets/create" class="btn-primary-glow">
-        <span>+</span> Create Ticket
-      </a>
+      <div class="header-left">
+        <a routerLink="/" class="btn-back" title="Back to Home">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+          </svg>
+        </a>
+        <h2 class="page-title">My Tickets</h2>
+      </div>
     </div>
 
-    <!-- Filter Section (Glassmorphism) -->
+    <!-- Filter Section (Synced with Ticket Management) -->
     <div class="glass-card filter-card">
       <div class="filter-grid">
-        <input type="text" class="dark-input" placeholder="Search title, description, location"
-          [(ngModel)]="filters.search" (keyup.enter)="search()" />
+        <input
+          type="text"
+          class="dark-input"
+          placeholder="Search title, description, location"
+          [(ngModel)]="filters.search"
+          (keyup.enter)="search()"
+        />
 
         <select class="dark-input" [(ngModel)]="filters.status" (ngModelChange)="onFilterChanged()">
           <option value="">All status</option>
@@ -74,30 +81,28 @@
       </div>
     </div>
 
-    <!-- Ticket List -->
+    <!-- Ticket List (Synced with Ticket Management) -->
     <div class="ticket-list">
       <div *ngIf="hasLoaded && tickets.length === 0" class="glass-card empty-state">
         <div class="empty-icon">📁</div>
-        <p>No tickets found starting right now.</p>
+        <p>No tickets found matching your criteria.</p>
       </div>
 
-      <div class="glass-card ticket-card" *ngFor="let ticket of tickets">
+      <div class="glass-card ticket-card" *ngFor="let ticket of pagedTickets">
         <div class="ticket-top">
-          <h3 [title]="ticket.title">{{ truncateText(ticket.title, 20) }}</h3>
+          <h3 [title]="ticket.title">{{ truncateText(ticket.title, 25) }}</h3>
           <span class="t-status" [ngClass]="ticket.status.toLowerCase()">{{ ticket.status }}</span>
         </div>
 
-        <p class="ticket-desc" [title]="ticket.description">{{ truncateText(ticket.description, 20) }}</p>
+        <p class="ticket-desc" [title]="ticket.description">{{ truncateText(ticket.description, 80) }}</p>
 
         <div class="meta-grid">
           <div class="meta-item"><span class="meta-label">ID</span> #{{ ticket.ticketId }}</div>
           <div class="meta-item"><span class="meta-label">Category</span> {{ ticket.categoryName }}</div>
           <div class="meta-item"><span class="meta-label">Priority</span> {{ getPriorityLabel(ticket.priority) }}</div>
           <div class="meta-item"><span class="meta-label">Location</span> {{ ticket.location }}</div>
-          <div class="meta-item"><span class="meta-label">Created</span> {{ ticket.createdAt | date:'dd/MM/yyyy HH:mm'
-            }}</div>
-          <div class="meta-item"><span class="meta-label">Technician</span> {{ ticket.technicianName || 'Not assigned'
-            }}</div>
+          <div class="meta-item"><span class="meta-label">Created</span> {{ ticket.createdAt | date:'dd/MM/yyyy' }}</div>
+          <div class="meta-item"><span class="meta-label">Technician</span> {{ ticket.technicianName || 'Pending' }}</div>
         </div>
 
         <div class="card-actions">
@@ -108,7 +113,6 @@
             </svg>
           </button>
           
-          <!-- Edit/Delete only if status is OPEN -->
           <ng-container *ngIf="ticket.status === 'OPEN'">
             <button class="btn-icon-action btn-edit" title="Edit Ticket" (click)="openEditModal(ticket)">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -125,10 +129,30 @@
       </div>
     </div>
 
+    <div class="pagination" *ngIf="tickets.length > pageSize">
+      <button class="page-btn" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 16px;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+      <button
+        class="page-btn"
+        *ngFor="let page of pageNumbers"
+        [class.active]="page === currentPage"
+        (click)="goToPage(page)">
+        {{ page }}
+      </button>
+      <button class="page-btn" [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 16px;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </div>
+
     <!-- Modals -->
     <!-- View Modal -->
     <div class="modal-backdrop" *ngIf="showViewModal" (click)="closeModals()">
-      <div class="modal-content large-modal glass-card" (click)="$event.stopPropagation()">
+      <div class="modal-content glass-card" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <h3>Ticket Details</h3>
           <button class="close-btn" (click)="closeModals()">
@@ -139,54 +163,22 @@
         </div>
         
         <div class="modal-body" *ngIf="currentDetail">
-          <div class="detail-grid">
-            <div class="detail-item detail-full">
-              <label>Title</label>
-              <span>{{ currentDetail.title }}</span>
-            </div>
-            <div class="detail-item detail-full">
-              <label>Description</label>
-              <span>{{ currentDetail.description }}</span>
-            </div>
-            <div class="detail-item">
-              <label>ID</label>
-              <span>#{{ currentDetail.ticketId }}</span>
-            </div>
-            <div class="detail-item">
+          <div class="form-group">
+            <label>Title</label>
+            <div class="glass-input">{{ currentDetail.title }}</div>
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <div class="glass-input" style="height: auto;">{{ currentDetail.description }}</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
               <label>Status</label>
               <span class="t-status" [ngClass]="currentDetail.status.toLowerCase()">{{ currentDetail.status }}</span>
             </div>
-            <div class="detail-item">
-              <label>Category</label>
-              <span>{{ currentDetail.categoryName }}</span>
-            </div>
-            <div class="detail-item">
+            <div class="form-group">
               <label>Priority</label>
-              <span>{{ getPriorityLabel(currentDetail.priority) }}</span>
-            </div>
-            <div class="detail-item">
-              <label>Location</label>
-              <span>{{ currentDetail.location }}</span>
-            </div>
-            <div class="detail-item">
-              <label>Reporter</label>
-              <span>{{ currentDetail.reporterName || 'Unknown' }}</span>
-            </div>
-            <div class="detail-item">
-              <label>Technician</label>
-              <span>{{ currentDetail.technicianName || 'Not assigned' }}</span>
-            </div>
-            <div class="detail-item">
-              <label>Created At</label>
-              <span>{{ currentDetail.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
-            </div>
-            <div class="detail-item detail-full" *ngIf="currentDetail.imageBefore">
-               <label>Image Before</label>
-               <img [src]="'http://localhost:5207' + currentDetail.imageBefore" class="detail-image" alt="Image Before" (error)="onImageError($event)">
-            </div>
-            <div class="detail-item detail-full" *ngIf="currentDetail.imageAfter">
-               <label>Image After</label>
-               <img [src]="'http://localhost:5207' + currentDetail.imageAfter" class="detail-image" alt="Image After" (error)="onImageError($event)">
+              <div class="glass-input">{{ getPriorityLabel(currentDetail.priority) }}</div>
             </div>
           </div>
         </div>
@@ -235,8 +227,8 @@
 
     <!-- Confirm Delete Modal -->
     <div class="modal-backdrop" *ngIf="showDeleteModal" (click)="closeModals()">
-      <div class="modal-content confirm-modal glass-card" (click)="$event.stopPropagation()">
-        <div class="modal-header confirm-header">
+      <div class="modal-content glass-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
           <h3>Confirm Delete</h3>
           <button class="close-btn" (click)="closeModals()">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -244,31 +236,17 @@
             </svg>
           </button>
         </div>
-        <div class="modal-body confirm-body">
-          <div class="confirm-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" class="confirm-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <p>Are you sure you want to delete ticket <strong class="text-white">#{{ ticketToDelete?.ticketId }}</strong>?</p>
-          <p class="text-danger-small">This will permanently delete the ticket and all its data.</p>
+        <div class="modal-body" style="text-align: center;">
+          <p>Are you sure you want to delete ticket <strong>#{{ ticketToDelete?.ticketId }}</strong>?</p>
+          <p style="color: #ef4444; font-size: 0.9rem; margin-top: 1rem;">This action cannot be undone.</p>
         </div>
         <div class="modal-footer" style="justify-content: center;">
           <button class="btn-secondary-glass compact" (click)="closeModals()">Cancel</button>
-          <button class="btn-danger" (click)="confirmDelete()" [disabled]="loading">
-            {{ loading ? 'Deleting...' : 'Confirm Delete' }}
+          <button class="btn-primary-glow compact" style="background: #ef4444;" (click)="confirmDelete()" [disabled]="loading">
+            {{ loading ? 'Deleting...' : 'Delete Ticket' }}
           </button>
         </div>
       </div>
-    </div>
-
-    <div class="bottom-actions">
-      <a routerLink="/" class="back-to-home">
-        <svg viewBox="0 0 24 24" fill="none" class="arrow-icon-back" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-        </svg>
-        Back to Home
-      </a>
     </div>
 
   </main>

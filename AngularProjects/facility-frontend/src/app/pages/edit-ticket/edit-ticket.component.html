@@ -1,0 +1,110 @@
+<div class="ticket-page">
+	<div class="ticket-card" *ngIf="!loadingTicket">
+		<div class="header-row">
+			<h2>Edit Ticket #{{ ticketId }}</h2>
+			<a routerLink="/my-ticket" class="back-link">← Back</a>
+		</div>
+
+		<div class="closed-note" *ngIf="isClosed">
+			This ticket is CLOSED. You cannot update it.
+		</div>
+
+		<form (ngSubmit)="submit()" class="ticket-form">
+			<div class="form-group">
+				<label>Title *</label>
+				<input
+					type="text"
+					name="title"
+					[(ngModel)]="formData.title"
+					maxlength="200"
+					placeholder="Short issue title"
+					[disabled]="isClosed"
+					required
+				/>
+			</div>
+
+			<div class="form-group">
+				<label>Description *</label>
+				<textarea
+					name="description"
+					[(ngModel)]="formData.description"
+					rows="4"
+					maxlength="1000"
+					placeholder="Describe the issue details"
+					[disabled]="isClosed"
+					required
+				></textarea>
+			</div>
+
+			<div class="form-row">
+				<div class="form-group">
+					<label>Location *</label>
+					<input
+						type="text"
+						name="location"
+						[(ngModel)]="formData.location"
+						maxlength="100"
+						placeholder="Building/Floor/Room"
+						[disabled]="isClosed"
+						required
+					/>
+				</div>
+
+				<div class="form-group">
+					<label>Category *</label>
+					<select name="categoryId" [(ngModel)]="formData.categoryId" [disabled]="isClosed" required>
+						<option [ngValue]="0">Select category</option>
+						<option *ngFor="let item of categories" [ngValue]="item.categoryId">
+							{{ item.categoryName }}
+						</option>
+					</select>
+				</div>
+			</div>
+
+			<div class="form-row">
+				<div class="form-group">
+					<label>Priority</label>
+					<select name="priority" [(ngModel)]="formData.priority" [disabled]="isClosed">
+						<option [ngValue]="1">Low</option>
+						<option [ngValue]="2">Medium</option>
+						<option [ngValue]="3">High</option>
+					</select>
+				</div>
+
+				<div class="form-group">
+					<label>Image (optional, max 2MB)</label>
+					<input #imageInput type="file" accept="image/*" class="file-input-hidden" (change)="onImageSelected($event)" [disabled]="isClosed" />
+					<div class="file-picker-row">
+						<button type="button" class="btn-file" (click)="imageInput.click()" [disabled]="isClosed">Choose image</button>
+						<span class="file-name" [title]="selectedImageName || 'No file selected'">
+							{{ selectedImageName || 'No file selected' }}
+						</span>
+					</div>
+					<img *ngIf="formData.imageBefore" [src]="formData.imageBefore" alt="Preview" class="image-preview" />
+					<button *ngIf="formData.imageBefore" type="button" class="btn-remove" (click)="clearImage(imageInput)" [disabled]="isClosed">Remove image</button>
+				</div>
+			</div>
+
+			<div class="action-row">
+				<a routerLink="/tickets/my" class="btn-back">Back</a>
+				<button type="submit" [disabled]="loading || isClosed">
+					{{ loading ? 'Saving...' : 'Save Changes' }}
+				</button>
+			</div>
+		</form>
+	</div>
+
+	<div class="ticket-card loading-state" *ngIf="loadingTicket">
+		Loading ticket...
+	</div>
+
+	<div class="popup-overlay" *ngIf="popupVisible">
+		<div class="popup-card" [class.success]="popupType === 'success'" [class.error]="popupType === 'error'" [class.warning]="popupType === 'warning'">
+			<h3>{{ popupTitle }}</h3>
+			<p>{{ popupMessage }}</p>
+			<div class="popup-actions">
+				<button type="button" class="popup-ok" (click)="closePopup()">OK</button>
+			</div>
+		</div>
+	</div>
+</div>

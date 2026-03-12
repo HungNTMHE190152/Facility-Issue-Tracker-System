@@ -9,6 +9,7 @@ public class CreateTicketDTO
     public string Title { get; set; } = string.Empty;
 
     [Required]
+    [MaxLength(1000)]
     public string Description { get; set; } = string.Empty;
 
     [Required]
@@ -20,5 +21,6 @@ public class CreateTicketDTO
     [Required]
     public int CategoryId { get; set; }
 
+    [MaxLength(2000000)]
     public string? ImageBefore { get; set; }
 }

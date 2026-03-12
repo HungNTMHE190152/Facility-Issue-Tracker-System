@@ -3,7 +3,7 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
-import { CategoryOption, CreateTicketRequest, MyTicketFilters, MyTicketItem } from '../models/ticket.models';
+import { CategoryOption, CreateTicketRequest, MyTicketFilters, MyTicketItem, UpdateTicketRequest } from '../models/ticket.models';
 
 @Injectable({
   providedIn: 'root'
@@ -62,7 +62,6 @@ export class TicketService {
       })
     );
   }
-
   getAllTickets(filters: MyTicketFilters): Observable<MyTicketItem[]> {
     let params = new HttpParams();
 
@@ -97,15 +96,15 @@ export class TicketService {
     );
   }
 
-  getTicketById(id: number): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/${id}`, { headers: this.getAuthHeaders() });
-  }
-
-  updateTicket(id: number, data: any): Observable<{ message: string }> {
-    return this.http.put<{ message: string }>(`${this.apiUrl}/${id}`, data, { headers: this.getAuthHeaders() });
-  }
-
   deleteTicket(id: number): Observable<{ message: string }> {
     return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`, { headers: this.getAuthHeaders() });
+  }
+
+  getTicketById(id: number): Observable<MyTicketItem> {
+    return this.http.get<MyTicketItem>(`${this.apiUrl}/${id}`, { headers: this.getAuthHeaders() });
+  }
+
+  updateTicket(id: number, data: UpdateTicketRequest): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(`${this.apiUrl}/${id}`, data, { headers: this.getAuthHeaders() });
   }
 }

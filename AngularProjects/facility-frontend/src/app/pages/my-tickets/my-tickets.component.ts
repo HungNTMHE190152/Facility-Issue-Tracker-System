@@ -1,7 +1,7 @@
 import { AfterViewInit, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { TicketService } from '../../services/ticket.service';
@@ -19,6 +19,13 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
   categories: CategoryOption[] = [];
   loading = false;
   hasLoaded = false;
+  currentPage = 1;
+  readonly pageSize = 5;
+  popupVisible = false;
+  popupTitle = '';
+  popupMessage = '';
+  popupType: 'success' | 'error' | 'warning' | 'confirm' = 'success';
+  private popupConfirmAction?: () => void;
   private loadTicketsSub?: Subscription;
 
   filters: MyTicketFilters = {
@@ -40,7 +47,8 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(
     private ticketService: TicketService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
@@ -66,6 +74,33 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  showPopup(
+    title: string,
+    message: string,
+    type: 'success' | 'error' | 'warning' | 'confirm',
+    confirmAction?: () => void
+  ): void {
+    this.popupTitle = title;
+    this.popupMessage = message;
+    this.popupType = type;
+    this.popupConfirmAction = confirmAction;
+    this.popupVisible = true;
+  }
+
+  closePopup(): void {
+    this.popupVisible = false;
+    this.popupConfirmAction = undefined;
+  }
+
+  confirmPopup(): void {
+    const callback = this.popupConfirmAction;
+    this.popupVisible = false;
+    this.popupConfirmAction = undefined;
+    if (callback) {
+      callback();
+    }
+  }
+
   loadTickets(): void {
     this.loadTicketsSub?.unsubscribe();
     this.loading = true;
@@ -79,15 +114,16 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
       .subscribe({
         next: (res) => {
           this.tickets = [...res];
+          this.currentPage = 1;
           this.cdr.detectChanges();
         },
         error: (err) => {
           if (err?.status === 401) {
-            alert('Your session has expired. Please log in again.');
+            this.showPopup('Session expired', 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.', 'warning');
             return;
           }
 
-          alert(err?.error?.message || err?.error || 'Cannot load tickets');
+          this.showPopup('Error', err?.error?.message || err?.error || 'Cannot load tickets', 'error');
         }
       });
   }
@@ -119,11 +155,11 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   truncateText(text: string | null | undefined, limit: number): string {
     if (!text) return '';
-    if (text.length <= limit) return text;
-    return text.substring(0, limit) + '...';
+    const effectiveLimit = Math.max(limit, 40); 
+    if (text.length <= effectiveLimit) return text;
+    return text.substring(0, effectiveLimit) + '...';
   }
 
-  // Action Methods
   openViewModal(ticket: MyTicketItem): void {
     this.currentDetail = ticket;
     this.showViewModal = true;
@@ -188,5 +224,58 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   onImageError(event: any): void {
     event.target.style.display = 'none';
+  }
+
+  isEditable(ticket: MyTicketItem): boolean {
+    return ticket.status?.toUpperCase() !== 'CLOSED';
+  }
+
+  editTicket(ticketId: number): void {
+    this.router.navigate(['/tickets/edit', ticketId]);
+  }
+
+  deleteTicket(ticket: MyTicketItem): void {
+    if (!this.isEditable(ticket)) {
+      this.showPopup('Warning', 'Cannot delete a closed ticket', 'warning');
+      return;
+    }
+
+    this.showPopup('Confirm delete', `Delete ticket #${ticket.ticketId}?`, 'confirm', () => {
+      this.ticketService.deleteTicket(ticket.ticketId).subscribe({
+        next: () => {
+          this.tickets = this.tickets.filter(x => x.ticketId !== ticket.ticketId);
+          if (this.currentPage > this.totalPages) {
+            this.currentPage = this.totalPages;
+          }
+          this.cdr.detectChanges();
+          this.showPopup('Success', 'Ticket deleted successfully', 'success');
+        },
+        error: (err) => {
+          this.showPopup('Error', err?.error?.message || err?.error || 'Delete ticket failed', 'error');
+        }
+      });
+    });
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.tickets.length / this.pageSize));
+  }
+
+  get pagedTickets(): MyTicketItem[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.tickets.slice(start, start + this.pageSize);
+  }
+
+  get pageNumbers(): number[] {
+    return Array.from({ length: this.totalPages }, (_, index) => index + 1);
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages || page === this.currentPage) {
+      return;
+    }
+
+    this.currentPage = page;
+    this.cdr.detectChanges();
   }
 }
