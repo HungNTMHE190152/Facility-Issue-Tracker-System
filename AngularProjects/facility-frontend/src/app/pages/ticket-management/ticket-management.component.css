@@ -573,6 +573,10 @@
   .meta-grid {
     grid-template-columns: 1fr 1fr;
   }
+
+  .modal-form-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 600px) {
@@ -585,7 +589,7 @@
 .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.4);
+  background: rgba(15, 23, 42, 0.22);
     backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
@@ -668,6 +672,12 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+}
+
+.modal-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
 }
 
 .form-group {
@@ -787,6 +797,12 @@
     border-radius: 8px;
     border: 1px dashed #fca5a5;
 }
+
+  .confirm-meta {
+    margin-top: 0.5rem;
+    font-size: 0.92rem;
+    color: #334155;
+  }
 
 .btn-danger {
     background: var(--danger, #ef4444);

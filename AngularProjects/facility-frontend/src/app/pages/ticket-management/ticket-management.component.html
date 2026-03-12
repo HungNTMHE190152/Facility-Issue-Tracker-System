@@ -89,7 +89,7 @@
           <div class="meta-item"><span class="meta-label">ID</span> #{{ ticket.ticketId }}</div>
           <div class="meta-item"><span class="meta-label">Category</span> {{ ticket.categoryName }}</div>
           <div class="meta-item"><span class="meta-label">Priority</span> {{ getPriorityLabel(ticket.priority) }}</div>
-          <div class="meta-item"><span class="meta-label">Location</span> {{ ticket.location }}</div>
+          <div class="meta-item"><span class="meta-label">Location</span> {{ getLocationValue(ticket) }}</div>
           <div class="meta-item"><span class="meta-label">Reporter</span> {{ ticket.reporterName || 'Unknown' }}</div>
           <div class="meta-item"><span class="meta-label">Technician</span> {{ ticket.technicianName || 'Not assigned' }}</div>
           <div class="meta-item"><span class="meta-label">Created</span> {{ ticket.createdAt | date:'dd/MM/yyyy HH:mm' }}</div>
@@ -172,7 +172,7 @@
         </div>
         <div class="detail-item">
           <label>Location</label>
-          <span>{{ currentDetail.location }}</span>
+          <span>{{ getLocationValue(currentDetail) }}</span>
         </div>
         <div class="detail-item">
           <label>Reporter</label>
@@ -190,13 +190,13 @@
           <label><svg style="width: 16px; height: 16px; display: inline-block; vertical-align: text-bottom; margin-right: 2px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Time Left</label>
           <span [ngStyle]="{'color': currentDetail.isOverdue ? '#ef4444' : '#eab308', 'font-weight': '800', 'font-size': '1.1rem'}">{{ currentDetail.timeLeftStr }}</span>
         </div>
-        <div class="detail-item detail-full" *ngIf="currentDetail.imageBefore">
+          <div class="detail-item detail-full" *ngIf="currentDetail.imageBefore">
            <label>Image Before</label>
-           <img [src]="'http://localhost:5207' + currentDetail.imageBefore" class="detail-image" alt="Image Before" (error)="onImageError($event)">
+            <img [src]="getImageUrl(currentDetail.imageBefore)" class="detail-image" alt="Image Before" (error)="onImageError($event)">
         </div>
         <div class="detail-item detail-full" *ngIf="currentDetail.imageAfter">
            <label>Image After</label>
-           <img [src]="'http://localhost:5207' + currentDetail.imageAfter" class="detail-image" alt="Image After" (error)="onImageError($event)">
+            <img [src]="getImageUrl(currentDetail.imageAfter)" class="detail-image" alt="Image After" (error)="onImageError($event)">
         </div>
       </div>
     </div>
@@ -216,28 +216,44 @@
     </div>
     <div class="modal-body" *ngIf="editData">
         <div class="form-group">
-            <label>Status</label>
-            <select [(ngModel)]="editData.status" class="glass-input select-input">
-                <option value="OPEN">OPEN</option>
-                <option value="ASSIGNED">ASSIGNED</option>
-                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                <option value="RESOLVED">RESOLVED</option>
-                <option value="CLOSED">CLOSED</option>
-            </select>
+            <label>Title *</label>
+            <input type="text" [(ngModel)]="editData.title" class="glass-input" maxlength="200" placeholder="Short issue title" />
         </div>
         <div class="form-group">
+            <label>Description *</label>
+            <textarea [(ngModel)]="editData.description" class="glass-input" rows="4" maxlength="1000" placeholder="Describe the issue details"></textarea>
+        </div>
+        <div class="modal-form-row">
+          <div class="form-group">
+            <label>Location *</label>
+            <input type="text" [(ngModel)]="editData.location" class="glass-input" maxlength="100" placeholder="Building/Floor/Room" />
+          </div>
+          <div class="form-group">
+            <label>Category *</label>
+            <select [(ngModel)]="editData.categoryId" class="glass-input select-input">
+              <option *ngFor="let cat of categories" [ngValue]="cat.categoryId">{{ cat.categoryName }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-form-row">
+          <div class="form-group">
             <label>Priority</label>
             <select [(ngModel)]="editData.priority" class="glass-input select-input">
-                <option [ngValue]="1">Low</option>
-                <option [ngValue]="2">Medium</option>
-                <option [ngValue]="3">High</option>
+              <option [ngValue]="1">Low</option>
+              <option [ngValue]="2">Medium</option>
+              <option [ngValue]="3">High</option>
             </select>
-        </div>
-        <div class="form-group">
-            <label>Category</label>
-            <select [(ngModel)]="editData.categoryId" class="glass-input select-input">
-                <option *ngFor="let cat of categories" [ngValue]="cat.categoryId">{{ cat.categoryName }}</option>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select [(ngModel)]="editData.status" class="glass-input select-input">
+              <option value="OPEN">OPEN</option>
+              <option value="ASSIGNED">ASSIGNED</option>
+              <option value="IN_PROGRESS">IN_PROGRESS</option>
+              <option value="RESOLVED">RESOLVED</option>
+              <option value="CLOSED">CLOSED</option>
             </select>
+          </div>
         </div>
         <div class="form-group">
             <label>Assign Technician</label>
@@ -274,6 +290,7 @@
         </svg>
       </div>
       <p>Are you sure you want to delete ticket <strong class="text-white">#{{ ticketToDelete?.ticketId }}</strong>?</p>
+      <p class="confirm-meta">Location: {{ getLocationValue(ticketToDelete) }}</p>
       <p class="text-danger-small">This will permanently delete the ticket, its history, and supply data.</p>
     </div>
     <div class="modal-footer" style="justify-content: center;">

@@ -100,7 +100,7 @@
           <div class="meta-item"><span class="meta-label">ID</span> #{{ ticket.ticketId }}</div>
           <div class="meta-item"><span class="meta-label">Category</span> {{ ticket.categoryName }}</div>
           <div class="meta-item"><span class="meta-label">Priority</span> {{ getPriorityLabel(ticket.priority) }}</div>
-          <div class="meta-item"><span class="meta-label">Location</span> {{ ticket.location }}</div>
+          <div class="meta-item"><span class="meta-label">Location</span> {{ getLocationValue(ticket) }}</div>
           <div class="meta-item"><span class="meta-label">Created</span> {{ ticket.createdAt | date:'dd/MM/yyyy' }}</div>
           <div class="meta-item"><span class="meta-label">Technician</span> {{ ticket.technicianName || 'Pending' }}</div>
         </div>
@@ -149,105 +149,174 @@
       </button>
     </div>
 
-    <!-- Modals -->
-    <!-- View Modal -->
-    <div class="modal-backdrop" *ngIf="showViewModal" (click)="closeModals()">
-      <div class="modal-content glass-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h3>Ticket Details</h3>
-          <button class="close-btn" (click)="closeModals()">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        
-        <div class="modal-body" *ngIf="currentDetail">
-          <div class="form-group">
+  </main>
+
+  <!-- Modals -->
+  <!-- View Modal -->
+  <div class="modal-backdrop" *ngIf="showViewModal" (click)="closeModals()">
+    <div class="modal-content large-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Ticket Details</h3>
+        <button class="close-btn" (click)="closeModals()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body" *ngIf="currentDetail">
+        <div class="detail-grid">
+          <div class="detail-item detail-full">
             <label>Title</label>
-            <div class="glass-input">{{ currentDetail.title }}</div>
+            <span>{{ currentDetail.title }}</span>
+          </div>
+          <div class="detail-item detail-full">
+            <label>Description</label>
+            <span>{{ currentDetail.description }}</span>
+          </div>
+          <div class="detail-item">
+            <label>ID</label>
+            <span>#{{ currentDetail.ticketId }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Status</label>
+            <span class="t-status" [ngClass]="currentDetail.status.toLowerCase()">{{ currentDetail.status }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Category</label>
+            <span>{{ currentDetail.categoryName }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Priority</label>
+            <span>{{ getPriorityLabel(currentDetail.priority) }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Location</label>
+            <span>{{ getLocationValue(currentDetail) }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Technician</label>
+            <span>{{ currentDetail.technicianName || 'Pending' }}</span>
+          </div>
+          <div class="detail-item detail-full">
+            <label>Created At</label>
+            <span>{{ currentDetail.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+          <div class="detail-item detail-full" *ngIf="currentDetail.imageBefore">
+            <label>Image Before <span class="img-hint">(click to enlarge)</span></label>
+            <img [src]="getImageUrl(currentDetail.imageBefore)" class="detail-image clickable-img" alt="Image Before"
+              (click)="openLightbox(getImageUrl(currentDetail.imageBefore))"
+              (error)="onImageError($event)">
+          </div>
+          <div class="detail-item detail-full" *ngIf="currentDetail.imageAfter">
+            <label>Image After <span class="img-hint">(click to enlarge)</span></label>
+            <img [src]="getImageUrl(currentDetail.imageAfter)" class="detail-image clickable-img" alt="Image After"
+              (click)="openLightbox(getImageUrl(currentDetail.imageAfter))"
+              (error)="onImageError($event)">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal-backdrop" *ngIf="showEditModal" (click)="closeModals()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Edit Ticket</h3>
+        <button class="close-btn" (click)="closeModals()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" *ngIf="editData">
+          <div class="form-group">
+              <label>Title *</label>
+              <input type="text" [(ngModel)]="editData.title" class="form-input" maxlength="200" placeholder="Short issue title" />
           </div>
           <div class="form-group">
-            <label>Description</label>
-            <div class="glass-input" style="height: auto;">{{ currentDetail.description }}</div>
+              <label>Description *</label>
+              <textarea [(ngModel)]="editData.description" class="form-input" rows="4" maxlength="1000" placeholder="Describe the issue details"></textarea>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-row">
             <div class="form-group">
-              <label>Status</label>
-              <span class="t-status" [ngClass]="currentDetail.status.toLowerCase()">{{ currentDetail.status }}</span>
+              <label>Location *</label>
+              <input type="text" [(ngModel)]="editData.location" class="form-input" maxlength="100" placeholder="Building/Floor/Room" />
             </div>
+            <div class="form-group">
+              <label>Category *</label>
+              <select [(ngModel)]="editData.categoryId" class="form-input select-input">
+                <option *ngFor="let cat of categories" [ngValue]="cat.categoryId">{{ cat.categoryName }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
             <div class="form-group">
               <label>Priority</label>
-              <div class="glass-input">{{ getPriorityLabel(currentDetail.priority) }}</div>
+              <select [(ngModel)]="editData.priority" class="form-input select-input">
+                <option [ngValue]="1">Low</option>
+                <option [ngValue]="2">Medium</option>
+                <option [ngValue]="3">High</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Image (optional, max 2MB)</label>
+              <input #editImageInput type="file" accept="image/*" class="file-input-hidden" (change)="onEditImageSelected($event)" />
+              <div class="file-picker-row">
+                <button type="button" class="btn-file" (click)="editImageInput.click()">Choose image</button>
+                <span class="file-name" [title]="editSelectedImageName || 'No file selected'">
+                  {{ editSelectedImageName || 'No file selected' }}
+                </span>
+              </div>
+              <img *ngIf="editData.imageBefore" [src]="getImageUrl(editData.imageBefore)" alt="Preview" class="image-preview clickable-img"
+                (click)="openLightbox(getImageUrl(editData.imageBefore))"
+                (error)="onImageError($event)" />
+              <button *ngIf="editData.imageBefore" type="button" class="btn-remove" (click)="clearEditImage(editImageInput)">Remove image</button>
             </div>
           </div>
-        </div>
+      </div>
+      <div class="modal-footer">
+          <button class="btn-secondary" (click)="closeModals()">Cancel</button>
+          <button class="btn-primary" (click)="submitEdit()" [disabled]="loading">
+              {{ loading ? 'Saving...' : 'Save Changes' }}
+          </button>
       </div>
     </div>
+  </div>
 
-    <!-- Edit Modal -->
-    <div class="modal-backdrop" *ngIf="showEditModal" (click)="closeModals()">
-      <div class="modal-content glass-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h3>Edit Ticket</h3>
-          <button class="close-btn" (click)="closeModals()">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <div class="modal-body" *ngIf="editData">
-            <div class="form-group">
-                <label>Title</label>
-                <input type="text" [(ngModel)]="editData.title" class="glass-input" placeholder="Enter title" />
-            </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea [(ngModel)]="editData.description" class="glass-input" rows="3" placeholder="Enter description"></textarea>
-            </div>
-            <div class="form-group">
-                <label>Location</label>
-                <input type="text" [(ngModel)]="editData.location" class="glass-input" placeholder="Enter location" />
-            </div>
-            <div class="form-group">
-                <label>Category</label>
-                <select [(ngModel)]="editData.categoryId" class="glass-input select-input">
-                    <option *ngFor="let cat of categories" [ngValue]="cat.categoryId">{{ cat.categoryName }}</option>
-                </select>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn-secondary-glass compact" (click)="closeModals()">Cancel</button>
-            <button class="btn-primary-glow compact" (click)="submitEdit()" [disabled]="loading">
-                {{ loading ? 'Saving...' : 'Save Changes' }}
-            </button>
-        </div>
+  <!-- Confirm Delete Modal -->
+  <div class="modal-backdrop" *ngIf="showDeleteModal" (click)="closeModals()">
+    <div class="modal-content delete-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Confirm Delete</h3>
+        <button class="close-btn" (click)="closeModals()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body delete-body">
+        <p>Are you sure you want to delete ticket <strong>#{{ ticketToDelete?.ticketId }}</strong>?</p>
+        <p class="delete-warning">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer delete-actions">
+        <button class="btn-secondary" (click)="closeModals()">Cancel</button>
+        <button class="btn-danger" (click)="confirmDelete()" [disabled]="loading">
+          {{ loading ? 'Deleting...' : 'Delete Ticket' }}
+        </button>
       </div>
     </div>
+  </div>
 
-    <!-- Confirm Delete Modal -->
-    <div class="modal-backdrop" *ngIf="showDeleteModal" (click)="closeModals()">
-      <div class="modal-content glass-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h3>Confirm Delete</h3>
-          <button class="close-btn" (click)="closeModals()">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <div class="modal-body" style="text-align: center;">
-          <p>Are you sure you want to delete ticket <strong>#{{ ticketToDelete?.ticketId }}</strong>?</p>
-          <p style="color: #ef4444; font-size: 0.9rem; margin-top: 1rem;">This action cannot be undone.</p>
-        </div>
-        <div class="modal-footer" style="justify-content: center;">
-          <button class="btn-secondary-glass compact" (click)="closeModals()">Cancel</button>
-          <button class="btn-primary-glow compact" style="background: #ef4444;" (click)="confirmDelete()" [disabled]="loading">
-            {{ loading ? 'Deleting...' : 'Delete Ticket' }}
-          </button>
-        </div>
-      </div>
-    </div>
+  <!-- Lightbox -->
+  <div class="lightbox-backdrop" *ngIf="lightboxSrc" (click)="closeLightbox()">
+    <button class="lightbox-close" (click)="closeLightbox()" title="Close">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+    <img [src]="lightboxSrc" class="lightbox-img" alt="Full image" (click)="$event.stopPropagation()" />
+  </div>
 
-  </main>
 </div>

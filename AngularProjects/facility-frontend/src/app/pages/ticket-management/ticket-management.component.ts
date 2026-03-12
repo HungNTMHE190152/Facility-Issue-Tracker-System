@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { TicketService } from '../../services/ticket.service';
 import { CategoryOption, MyTicketFilters, MyTicketItem } from '../../models/ticket.models';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-ticket-management',
@@ -15,6 +16,7 @@ import { CategoryOption, MyTicketFilters, MyTicketItem } from '../../models/tick
   styleUrl: './ticket-management.component.css'
 })
 export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly apiBaseUrl = environment.apiUrl;
   tickets: MyTicketItem[] = [];
   categories: CategoryOption[] = [];
   loading = false;
@@ -140,7 +142,12 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
       }))
       .subscribe({
         next: (res) => {
-          this.tickets = [...res];
+          this.tickets = (res ?? []).map(ticket => ({
+            ...ticket,
+            location: this.getLocationValue(ticket),
+            imageBefore: this.getImagePath(ticket, 'imageBefore'),
+            imageAfter: this.getImagePath(ticket, 'imageAfter')
+          }));
           this.cdr.detectChanges();
         },
         error: (err) => {
@@ -210,7 +217,12 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
   openViewModal(ticket: MyTicketItem): void {
     this.ticketService.getTicketById(ticket.ticketId).subscribe({
       next: (res) => {
-        this.currentDetail = res;
+        this.currentDetail = {
+          ...res,
+          location: this.getLocationValue(res),
+          imageBefore: this.getImagePath(res, 'imageBefore'),
+          imageAfter: this.getImagePath(res, 'imageAfter')
+        };
         this.showViewModal = true;
       },
       error: () => this.showAlert('Cannot load ticket details', true)
@@ -223,6 +235,9 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
       next: (res) => {
         this.editData = {
           ticketId: res.ticketId,
+          title: res.title,
+          description: res.description,
+          location: this.getLocationValue(res),
           status: res.status,
           priority: res.priority,
           categoryId: res.categoryId,
@@ -290,6 +305,30 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
 
   onImageError(event: any): void {
     event.target.style.display = 'none';
+  }
+
+  getLocationValue(ticket: any): string {
+    const value = ticket?.location ?? ticket?.Location;
+    if (typeof value !== 'string') return 'N/A';
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : 'N/A';
+  }
+
+  getImagePath(ticket: any, key: 'imageBefore' | 'imageAfter'): string | null {
+    if (!ticket) return null;
+    const camel = ticket[key];
+    const pascal = ticket[key === 'imageBefore' ? 'ImageBefore' : 'ImageAfter'];
+    const value = camel ?? pascal;
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  getImageUrl(path: string | null | undefined): string {
+    if (!path) return '';
+    if (/^data:image\//i.test(path)) return path;
+    if (/^https?:\/\//i.test(path)) return path;
+    return `${this.apiBaseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
   }
 
   truncateText(text: string | null | undefined, limit: number): string {
