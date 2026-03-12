@@ -1,12 +1,25 @@
 <div class="ticket-page">
 	<div class="ticket-card" *ngIf="!loadingTicket">
 		<div class="header-row">
-			<h2>Edit Ticket #{{ ticketId }}</h2>
-			<a routerLink="/my-ticket" class="back-link">← Back</a>
+			<div class="header-left">
+				<a [routerLink]="canEdit ? '/tickets/my' : '/profile'" class="btn-back" [title]="canEdit ? 'Back to My Tickets' : 'Back to Profile'">
+					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+					</svg>
+				</a>
+				<h2 class="page-title">Edit Ticket #{{ ticketId }}</h2>
+			</div>
 		</div>
 
 		<div class="closed-note" *ngIf="isClosed">
 			This ticket is CLOSED. You cannot update it.
+		</div>
+		
+		<div class="closed-note" *ngIf="!canEdit && !isClosed" style="background: #eff6ff; color: #1e40af; border-color: #dbeafe;">
+			<svg xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+			</svg>
+			View Only Mode: Reporters can only edit tickets with <strong>OPEN</strong> status.
 		</div>
 
 		<form (ngSubmit)="submit()" class="ticket-form">
@@ -45,14 +58,14 @@
 						[(ngModel)]="formData.location"
 						maxlength="100"
 						placeholder="Building/Floor/Room"
-						[disabled]="isClosed"
+						[disabled]="!canEdit"
 						required
 					/>
 				</div>
 
 				<div class="form-group">
 					<label>Category *</label>
-					<select name="categoryId" [(ngModel)]="formData.categoryId" [disabled]="isClosed" required>
+					<select name="categoryId" [(ngModel)]="formData.categoryId" [disabled]="!canEdit" required>
 						<option [ngValue]="0">Select category</option>
 						<option *ngFor="let item of categories" [ngValue]="item.categoryId">
 							{{ item.categoryName }}
@@ -64,7 +77,7 @@
 			<div class="form-row">
 				<div class="form-group">
 					<label>Priority</label>
-					<select name="priority" [(ngModel)]="formData.priority" [disabled]="isClosed">
+					<select name="priority" [(ngModel)]="formData.priority" [disabled]="!canEdit">
 						<option [ngValue]="1">Low</option>
 						<option [ngValue]="2">Medium</option>
 						<option [ngValue]="3">High</option>
@@ -73,21 +86,20 @@
 
 				<div class="form-group">
 					<label>Image (optional, max 2MB)</label>
-					<input #imageInput type="file" accept="image/*" class="file-input-hidden" (change)="onImageSelected($event)" [disabled]="isClosed" />
+					<input #imageInput type="file" accept="image/*" class="file-input-hidden" (change)="onImageSelected($event)" [disabled]="!canEdit" />
 					<div class="file-picker-row">
-						<button type="button" class="btn-file" (click)="imageInput.click()" [disabled]="isClosed">Choose image</button>
+						<button type="button" class="btn-file" (click)="imageInput.click()" [disabled]="!canEdit">Choose image</button>
 						<span class="file-name" [title]="selectedImageName || 'No file selected'">
 							{{ selectedImageName || 'No file selected' }}
 						</span>
 					</div>
 					<img *ngIf="formData.imageBefore" [src]="formData.imageBefore" alt="Preview" class="image-preview" />
-					<button *ngIf="formData.imageBefore" type="button" class="btn-remove" (click)="clearImage(imageInput)" [disabled]="isClosed">Remove image</button>
+					<button *ngIf="formData.imageBefore" type="button" class="btn-remove" (click)="clearImage(imageInput)" [disabled]="!canEdit">Remove image</button>
 				</div>
 			</div>
 
 			<div class="action-row">
-				<a routerLink="/tickets/my" class="btn-back">Back</a>
-				<button type="submit" [disabled]="loading || isClosed">
+				<button type="submit" [disabled]="loading || !canEdit">
 					{{ loading ? 'Saving...' : 'Save Changes' }}
 				</button>
 			</div>

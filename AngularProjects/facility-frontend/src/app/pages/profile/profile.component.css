@@ -124,6 +124,40 @@
     letter-spacing: -0.025em;
 }
 
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.btn-back {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-main);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    cursor: pointer;
+}
+
+.btn-back:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: translateX(-4px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.btn-back svg {
+    width: 20px;
+    height: 20px;
+}
+
 .action-buttons {
     display: flex;
     gap: 1rem;
@@ -307,6 +341,63 @@
     border: 1px solid #bfdbfe;
 }
 
+.role-badge.reporter { background: #e0f2fe; color: #0369a1; }
+.role-badge.dispatcher { background: #fef3c7; color: #92400e; }
+.role-badge.technician { background: #dcfce7; color: #166534; }
+
+.loading-tickets {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 3rem;
+    color: var(--text-muted);
+}
+
+.spinner-small {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(59, 130, 246, 0.1);
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-text {
+    opacity: 0.6;
+    position: relative;
+    overflow: hidden;
+    background: #f1f5f9;
+    border-radius: 4px;
+    min-width: 100px;
+}
+
+.loading-text::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
+
+.error-msg-banner {
+    background: #fef2f2;
+    color: #dc2626;
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    border: 1px solid #fee2e2;
+}
 .pulse-dot {
     width: 8px;
     height: 8px;
@@ -405,14 +496,43 @@
     justify-content: center;
 }
 
-.resolved-icon {
-    background: #dcfce7;
-    color: #16a34a;
+.activity-icon {
+    background: #e0f2fe;
+    color: #0284c7;
+    position: relative;
+    box-shadow: 0 0 15px rgba(2, 132, 199, 0.2);
 }
 
-.progress-icon {
-    background: #ffedd5;
-    color: #ea580c;
+.activity-icon::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border: 2px solid #0284c7;
+    border-radius: 12px;
+    opacity: 0.3;
+    animation: pingSoft 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes pingSoft {
+    0% { transform: scale(1); opacity: 0.3; }
+    70% { transform: scale(1.1); opacity: 0; }
+    100% { transform: scale(1); opacity: 0; }
+}
+
+.pending-icon {
+    background: #f1f5f9;
+    color: #94a3b8;
+    border: 1px dashed #cbd5e1;
+}
+
+.no-tickets-msg {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    font-style: italic;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
 }
 
 .ticket-icon {
@@ -429,8 +549,12 @@
 .ticket-title {
     margin: 0;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
 }
 
 .ticket-time {
@@ -454,16 +578,53 @@
     letter-spacing: 0.05em;
 }
 
-.resolved-pill {
+.ticket-meta-box {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.view-hint, .edit-hint {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.view-hint {
+    color: #6366f1;
+}
+
+.edit-hint {
+    color: #10b981;
+}
+
+.ticket-status-pills {
+    margin-left: auto;
+    padding-left: 1rem;
+}
+
+.status-pill.resolved {
     background: #f0fdf4;
     color: #16a34a;
     border: 1px solid #bbf7d0;
 }
 
-.progress-pill {
+.status-pill.in-progress {
     background: #fff7ed;
     color: #ea580c;
     border: 1px solid #fed7aa;
+}
+
+.status-pill.open {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+.status-pill.closed {
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #e2e8f0;
 }
 
 .action-btn {

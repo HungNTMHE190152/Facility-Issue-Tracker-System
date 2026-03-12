@@ -30,6 +30,8 @@
                         <span class="welcome-text">👋 {{ userName }}</span>
                         <a *ngIf="userRole.toLowerCase() === 'dispatcher'" routerLink="/dispatcher-dashboard"
                             class="nav-item">Manager</a>
+                        <a *ngIf="userRole.toLowerCase() === 'technician'" routerLink="/technician-dashboard"
+                            class="nav-item">Manager</a>
                         <a routerLink="/tickets/my" class="nav-item">My Tickets</a>
                         <a routerLink="/profile" class="nav-item">Profile</a>
                         <button (click)="logout()" class="logout-btn">Logout</button>
@@ -53,7 +55,7 @@
                     Experience a seamless, intelligent helpdesk solution. Track, assign, and resolve issues at lighting
                     speed. Empower your team and keep your facilities running flawlessly.
                 </p>
-                <div class="hero-actions animate-fade-in-up" style="animation-delay: 0.4s">
+                <div class="hero-actions animate-fade-in-up" style="animation-delay: 0.4s" *ngIf="!isLoggedIn">
                     <a routerLink="/register" class="btn-primary-glow large">
                         Start tracking now
                         <svg class="arrow-icon" viewBox="0 0 20 20" fill="currentColor">

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { TicketService } from '../../services/ticket.service';
+import { AuthService } from '../../services/auth.services';
 import { CategoryOption, UpdateTicketRequest } from '../../models/ticket.models';
 
 @Component({
@@ -19,6 +20,8 @@ export class EditTicketComponent implements OnInit {
 	loading = false;
 	loadingTicket = true;
 	isClosed = false;
+	userRole = '';
+	canEdit = true;
 	selectedImageName = '';
 	popupVisible = false;
 	popupTitle = '';
@@ -45,6 +48,7 @@ export class EditTicketComponent implements OnInit {
 		private route: ActivatedRoute,
 		private router: Router,
 		private ticketService: TicketService,
+		private authService: AuthService,
 		private cdr: ChangeDetectorRef
 	) {}
 
@@ -55,6 +59,7 @@ export class EditTicketComponent implements OnInit {
 			return;
 		}
 
+		this.userRole = this.authService.getCurrentUserRole();
 		this.loadCategories();
 		this.loadTicket();
 	}
@@ -92,6 +97,16 @@ export class EditTicketComponent implements OnInit {
 		this.ticketService.getTicketById(this.ticketId).subscribe({
 			next: (ticket) => {
 				this.isClosed = ticket.status?.toUpperCase() === 'CLOSED';
+				
+				// Permission Check:
+				// 1. Dispatcher/Technician can always edit (unless CLOSED)
+				// 2. Reporter can ONLY edit if status is OPEN
+				if (this.userRole === 'Reporter') {
+					this.canEdit = ticket.status?.toUpperCase() === 'OPEN';
+				} else {
+					this.canEdit = !this.isClosed;
+				}
+
 				this.formData = {
 					title: ticket.title,
 					description: ticket.description,

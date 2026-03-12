@@ -4,7 +4,20 @@
 
     <div class="profile-container">
         <div class="profile-header-actions">
-            <h2 class="page-title">My Profile</h2>
+            <div class="header-left">
+                <!-- Back button: Home if viewing, Profile if editing -->
+                <a *ngIf="!isEditing" routerLink="/home" class="btn-back" title="Back to Home">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </a>
+                <a *ngIf="isEditing" (click)="toggleEdit()" class="btn-back" title="Back to Profile">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </a>
+                <h2 class="page-title">{{ user?.fullName || cachedName }}</h2>
+            </div>
             <div class="action-buttons">
                 <a routerLink="/change-password" class="btn-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon-small" fill="none" viewBox="0 0 24 24"
@@ -30,7 +43,7 @@
                 <div class="avatar-container">
                     <div class="avatar-ring">
                         <div class="avatar-inner">
-                            <span class="avatar-text">JD</span>
+                            <span class="avatar-text">{{ getInitials(user?.fullName || cachedName) }}</span>
                             <div class="avatar-overlay">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="camera-icon" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
@@ -50,25 +63,27 @@
                     style="padding: 10px; background-color: #d4edda; color: #155724; border-radius: 4px; margin-bottom: 15px; text-align: center; font-weight: 500;">
                     {{ successMessage }}
                 </div>
-                <div class="info-grid" *ngIf="user; else loadingState">
-                    <!-- View Mode -->
+                <div class="info-grid">
+                    <!-- Loading or View Mode -->
                     <ng-container *ngIf="!isEditing">
                         <div class="info-group">
                             <h3 class="info-label">Full Name</h3>
-                            <p class="info-value">{{ user.fullName }}</p>
+                            <p class="info-value" [class.loading-text]="loadingProfile && !cachedName">{{ user?.fullName || cachedName }}</p>
                         </div>
 
                         <div class="info-group">
                             <h3 class="info-label">Role</h3>
-                            <div class="role-badge reporter">
+                            <div class="role-badge" [ngClass]="(user?.role || cachedRole)?.toLowerCase() || 'reporter'">
                                 <span class="pulse-dot"></span>
-                                {{ user.role }}
+                                {{ user?.role || cachedRole }}
                             </div>
                         </div>
 
                         <div class="info-group">
                             <h3 class="info-label">Email Address</h3>
-                            <p class="info-value email">{{ user.email }}</p>
+                            <p class="info-value email" [class.loading-text]="loadingProfile && !cachedEmail">
+                                {{ user?.email || cachedEmail || (loadingProfile ? 'Loading...' : 'N/A') }}
+                            </p>
                         </div>
                     </ng-container>
 
@@ -90,7 +105,7 @@
 
                         <div class="info-group">
                             <h3 class="info-label">Email Address</h3>
-                            <p class="info-value email" style="margin-top: 5px;">{{ user.email }}</p>
+                            <p class="info-value email" style="margin-top: 5px;">{{ user?.email }}</p>
                         </div>
 
                         <div class="edit-actions"
@@ -106,65 +121,50 @@
                         </div>
                     </ng-container>
                 </div>
-                <ng-template #loadingState>
-                    <div class="info-grid">
-                        <p *ngIf="isLoading">Loading profile...</p>
-                        <p *ngIf="errorMessage" style="color: red;">{{ errorMessage }}</p>
-                    </div>
-                </ng-template>
+                
+                <div *ngIf="errorMessage" class="error-msg-banner">
+                    {{ errorMessage }}
+                </div>
 
-                <div class="activity-section">
+                <div class="activity-section" *ngIf="!isEditing">
                     <div class="activity-header">
                         <h3 class="section-title">Recent Tickets Activity</h3>
                         <button class="view-all-btn">View All</button>
                     </div>
 
                     <ul class="ticket-list">
-                        <li class="ticket-item resolved">
-                            <div class="ticket-main">
-                                <div class="ticket-icon-wrapper resolved-icon">
-                                    <svg class="ticket-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M5 13l4 4L19 7" />
-                                    </svg>
-                                </div>
-                                <div class="ticket-details">
-                                    <h4 class="ticket-title">AC broken in Room 302</h4>
-                                    <span class="ticket-time">Today, 10:30 AM</span>
-                                </div>
-                            </div>
-                            <div class="ticket-actions">
-                                <span class="status-pill resolved-pill">Resolved</span>
-                                <button class="action-btn">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="action-icon" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
-                            </div>
+                        <li *ngIf="loadingTickets" class="loading-tickets">
+                            <div class="spinner-small"></div>
+                            Loading activities...
                         </li>
-
-                        <li class="ticket-item in-progress">
+                        <li *ngIf="!loadingTickets && recentTickets.length === 0" class="no-tickets-msg">
+                            No recent ticket activity.
+                        </li>
+                        <li *ngFor="let ticket of recentTickets" class="ticket-item" 
+                            [ngClass]="isTicketActive(ticket) ? 'active' : 'no-response'"
+                            [routerLink]="['/tickets/edit', ticket.ticketId]"
+                            style="cursor: pointer;">
                             <div class="ticket-main">
-                                <div class="ticket-icon-wrapper progress-icon">
-                                    <svg class="ticket-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <div class="ticket-icon-wrapper" [ngClass]="isTicketActive(ticket) ? 'activity-icon' : 'pending-icon'">
+                                    <!-- Icon for Activity (Status Changed) -->
+                                    <svg *ngIf="isTicketActive(ticket)" class="ticket-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                    <!-- Icon for No Response (Status OPEN) -->
+                                    <svg *ngIf="!isTicketActive(ticket)" class="ticket-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                                     </svg>
                                 </div>
                                 <div class="ticket-details">
-                                    <h4 class="ticket-title">Flickering lights in Hallway B</h4>
-                                    <span class="ticket-time">Yesterday, 14:15 PM</span>
+                                    <h4 class="ticket-title" [title]="ticket.title">{{ truncateText(ticket.title, 50) }}</h4>
+                                    <span class="ticket-time">{{ isTicketActive(ticket) ? 'Status changed: ' : 'Awaiting response' }}</span>
                                 </div>
                             </div>
                             <div class="ticket-actions">
-                                <span class="status-pill progress-pill">In Progress</span>
-                                <button class="action-btn">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="action-icon" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M9 5l7 7-7 7" />
+                                <span class="status-pill" [ngClass]="ticket.status.toLowerCase().replace(' ', '-')">{{ ticket.status }}</span>
+                                <button class="action-btn" [routerLink]="['/tickets/edit', ticket.ticketId]">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="action-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                     </svg>
                                 </button>
                             </div>
@@ -174,24 +174,5 @@
             </div>
         </div>
 
-        <div style="margin-top: 20px; display: flex; justify-content: flex-start;">
-            <!-- Back to Home (View Mode) -->
-            <a *ngIf="!isEditing" routerLink="/home" class="btn-secondary"
-                style="padding: 10px 20px; border-radius: 8px; text-decoration: none; display: flex; align-items: center; gap: 8px; font-weight: 500; color: #4b5563; background-color: #f3f4f6; border: 1px solid #e5e7eb; transition: all 0.2s;">
-                <svg xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                </svg>
-                Back to Home
-            </a>
-
-            <!-- Back to Profile (Edit Mode) -->
-            <a *ngIf="isEditing" (click)="toggleEdit()" class="btn-secondary"
-                style="padding: 10px 20px; border-radius: 8px; text-decoration: none; display: flex; align-items: center; gap: 8px; font-weight: 500; color: #4b5563; background-color: #f3f4f6; border: 1px solid #e5e7eb; transition: all 0.2s; cursor: pointer;">
-                <svg xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                </svg>
-                Back to Profile
-            </a>
-        </div>
     </div>
 </div>

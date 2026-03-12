@@ -28,6 +28,26 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
     categoryId: null
   };
 
+  // Pagination
+  currentPage: number = 1;
+  pageSize: number = 10;
+
+  get totalPages(): number {
+    return Math.ceil(this.tickets.length / this.pageSize);
+  }
+
+  get paginatedTickets(): MyTicketItem[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.tickets.slice(start, start + this.pageSize);
+  }
+
+  changePage(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
   constructor(
     private ticketService: TicketService,
     private cdr: ChangeDetectorRef
@@ -93,8 +113,10 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
     
     const assignedTime = new Date(dateStr).getTime();
     
-    let hoursAllowed = 36; // Level 1 (Low) = 36h
-    if (ticket.priority === 3) hoursAllowed = 12; // High
+    let hoursAllowed = 36; // Default
+    if (ticket.status === 'ASSIGNED') {
+      hoursAllowed = 3; // 3h to accept
+    } else if (ticket.priority === 3) hoursAllowed = 12; // High
     else if (ticket.priority === 2) hoursAllowed = 24; // Medium
 
     const deadline = assignedTime + (hoursAllowed * 60 * 60 * 1000);
@@ -159,10 +181,12 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   search(): void {
+    this.currentPage = 1;
     this.loadTickets();
   }
 
   onFilterChanged(): void {
+    this.currentPage = 1;
     this.loadTickets();
   }
 
@@ -173,6 +197,7 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
       priority: null,
       categoryId: null
     };
+    this.currentPage = 1;
     this.loadTickets();
   }
 

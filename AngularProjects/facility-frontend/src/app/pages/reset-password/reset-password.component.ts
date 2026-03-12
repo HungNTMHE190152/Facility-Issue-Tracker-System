@@ -67,7 +67,16 @@ export class ResetPasswordComponent implements OnInit {
                 this.isLoading = false;
                 this.message = 'Password reset successfully. Redirecting to login...';
                 this.isError = false;
-                this.router.navigate(['/login']);
+                
+                // Chờ 1.5s để user thấy thông báo thành công
+                setTimeout(() => {
+                    this.router.navigate(['/login'], { 
+                        queryParams: { 
+                            email: this.email, 
+                            password: this.newPassword 
+                        } 
+                    });
+                }, 1500);
             },
             error: (err) => {
                 this.isLoading = false;

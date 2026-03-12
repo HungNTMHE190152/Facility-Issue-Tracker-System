@@ -49,9 +49,11 @@ export class LoginComponent implements OnInit {
         if (res && res.token) {
           console.log('Token saved successfully:', res.token);
 
-          const role = res.role || localStorage.getItem('role') || '';
-          if (role.toLowerCase() === 'dispatcher') {
+          const role = (res.role || localStorage.getItem('role') || '').toLowerCase();
+          if (role === 'dispatcher') {
             this.router.navigate(['/dispatcher-dashboard']);
+          } else if (role === 'technician') {
+            this.router.navigate(['/technician-dashboard']);
           } else {
             this.router.navigate(['/']); // hoặc '/profile' tùy bạn
           }

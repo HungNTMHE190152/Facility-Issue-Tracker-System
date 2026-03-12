@@ -82,7 +82,7 @@ public class TicketsController : ControllerBase
             .AsNoTracking()
             .Include(x => x.Category)
             .Include(x => x.Technician)
-            .Where(x => x.ReporterId == reporterId)
+            .Where(x => x.ReporterId == userId || x.TechnicianId == userId)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -251,10 +251,28 @@ public class TicketsController : ControllerBase
         // Nếu là Reporter thì chỉ sửa được vé của chính mình, VÀ chỉ khi vé đang ở mức OPEN
         if (!isDispatcherOrAdmin)
         {
-            if (ticket.ReporterId.ToString() != userIdStr)
-                return Forbid();
-            if (ticket.Status != null && ticket.Status.ToUpper() != "OPEN")
-                return Forbid(); // Tránh Reporter sửa vé đã tiếp nhận
+            // Nếu là Technician
+            if (User.IsInRole("Technician"))
+            {
+                if (ticket.TechnicianId.ToString() != userIdStr)
+                    return Forbid();
+                
+                // Nếu đang muốn ACCEPT (chuyển sang IN_PROGRESS)
+                if (dto.Status?.ToUpper() == "IN_PROGRESS" && ticket.Status?.ToUpper() == "ASSIGNED")
+                {
+                    if (ticket.AssignedAt != null && DateTime.Now > ticket.AssignedAt.Value.AddHours(3))
+                    {
+                        return BadRequest(new { message = "Không thể tiếp nhận vé. Đã quá hạn 3 giờ kể từ khi được bàn giao (SLA Breach)." });
+                    }
+                }
+            }
+            else // Nếu là Reporter
+            {
+                if (ticket.ReporterId.ToString() != userIdStr)
+                    return Forbid();
+                if (ticket.Status != null && ticket.Status.ToUpper() != "OPEN")
+                    return Forbid(); 
+            }
         }
 
         if (int.TryParse(userIdStr, out var currentUserId) && isDispatcherOrAdmin)

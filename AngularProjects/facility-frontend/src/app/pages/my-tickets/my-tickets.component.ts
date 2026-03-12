@@ -1,10 +1,12 @@
 import { AfterViewInit, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Action } from 'rxjs/internal/scheduler/Action';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { TicketService } from '../../services/ticket.service';
+import { AuthService } from '../../services/auth.services';
 import { CategoryOption, MyTicketFilters, MyTicketItem } from '../../models/ticket.models';
 
 @Component({
@@ -20,13 +22,14 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
   loading = false;
   hasLoaded = false;
   currentPage = 1;
-  readonly pageSize = 5;
+  readonly pageSize = 6;
   popupVisible = false;
   popupTitle = '';
   popupMessage = '';
   popupType: 'success' | 'error' | 'warning' | 'confirm' = 'success';
   private popupConfirmAction?: () => void;
   private loadTicketsSub?: Subscription;
+  private timerInterval: any;
 
   filters: MyTicketFilters = {
     search: '',
@@ -44,23 +47,42 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
   ticketToDelete: MyTicketItem | null = null;
   alertMessage = '';
   isError = false;
+  userRole = '';
 
   constructor(
     private ticketService: TicketService,
+    private authService: AuthService,
     private cdr: ChangeDetectorRef,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) { }
 
   ngOnInit(): void {
+    this.userRole = this.authService.getCurrentUserRole();
+    this.startCountdownTimer();
     this.loadCategories();
+
+    // Handle query parameters for deep linking (e.g. from Dashboard)
+    const sub = this.route.queryParams.subscribe(params => {
+      if (params['status']) this.filters.status = params['status'];
+      if (params['priority']) this.filters.priority = params['priority'] ? +params['priority'] : null;
+      if (params['categoryId']) this.filters.categoryId = params['categoryId'] ? +params['categoryId'] : null;
+      if (params['search']) this.filters.search = params['search'];
+
+      this.loadTickets();
+    });
+    this.loadTicketsSub = sub;
   }
 
   ngAfterViewInit(): void {
-    this.loadTickets();
+    // Already handled by ngOnInit queryParams subscription
   }
 
   ngOnDestroy(): void {
     this.loadTicketsSub?.unsubscribe();
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+    }
   }
 
   loadCategories(): void {
@@ -155,9 +177,95 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   truncateText(text: string | null | undefined, limit: number): string {
     if (!text) return '';
-    const effectiveLimit = Math.max(limit, 40); 
-    if (text.length <= effectiveLimit) return text;
-    return text.substring(0, effectiveLimit) + '...';
+    if (text.length <= limit) return text;
+    return text.substring(0, limit) + '...';
+  }
+
+  // Countdown Timer Logic (Synced with Ticket Management)
+  startCountdownTimer(): void {
+    this.timerInterval = setInterval(() => {
+      this.updateCountdowns();
+    }, 1000);
+  }
+
+  updateCountdowns(): void {
+    const now = new Date().getTime();
+    let changed = false;
+
+    if (this.tickets && this.tickets.length > 0) {
+      this.tickets.forEach(t => {
+        if (this.calculateTimeLeft(t, now)) changed = true;
+      });
+    }
+
+    if (this.currentDetail) {
+      if (this.calculateTimeLeft(this.currentDetail, now)) changed = true;
+    }
+
+    if (changed) {
+      this.cdr.detectChanges();
+    }
+  }
+
+  calculateTimeLeft(ticket: any, now: number): boolean {
+    if ((ticket.status !== 'ASSIGNED' && ticket.status !== 'IN_PROGRESS') || !ticket.assignedAt) {
+      if (ticket.timeLeftStr) {
+        ticket.timeLeftStr = null;
+        ticket.isOverdue = false;
+        return true;
+      }
+      return false;
+    }
+
+    let dateStr = ticket.assignedAt;
+    if (dateStr.endsWith('Z')) dateStr = dateStr.slice(0, -1);
+    const assignedTime = new Date(dateStr).getTime();
+
+    let hoursAllowed = 36;
+    if (ticket.status === 'ASSIGNED') {
+      hoursAllowed = 3;
+    } else if (ticket.priority === 3) hoursAllowed = 12;
+    else if (ticket.priority === 2) hoursAllowed = 24;
+
+    const deadline = assignedTime + (hoursAllowed * 60 * 60 * 1000);
+    const diff = deadline - now;
+    let oldStr = ticket.timeLeftStr;
+
+    if (diff <= 0) {
+      ticket.isOverdue = true;
+      ticket.timeLeftStr = 'OVERDUE';
+    } else {
+      ticket.isOverdue = false;
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      ticket.timeLeftStr = `${h}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`;
+    }
+
+    return oldStr !== ticket.timeLeftStr;
+  }
+
+  acceptTicket(ticket: MyTicketItem): void {
+    this.loading = true;
+    const updateData = {
+      ticketId: ticket.ticketId,
+      title: ticket.title,
+      description: ticket.description,
+      location: ticket.location,
+      categoryId: ticket.categoryId,
+      status: 'IN_PROGRESS'
+    };
+
+    this.ticketService.updateTicket(ticket.ticketId, updateData as any).subscribe({
+      next: () => {
+        this.showPopup('Success', 'Phòng kỹ thuật đã tiếp nhận yêu cầu!', 'success');
+        this.loadTickets();
+      },
+      error: (err) => {
+        this.showPopup('Error', err?.error?.message || 'Không thể tiếp nhận vé', 'error');
+        this.loading = false;
+      }
+    });
   }
 
   openViewModal(ticket: MyTicketItem): void {
@@ -227,7 +335,20 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   isEditable(ticket: MyTicketItem): boolean {
-    return ticket.status?.toUpperCase() !== 'CLOSED';
+    if (!ticket) return false;
+    const role = this.authService.getCurrentUserRole();
+    const status = ticket.status?.toUpperCase();
+
+    // CLOSED tickets are never editable
+    if (status === 'CLOSED') return false;
+
+    // Reporters can only edit OPEN tickets
+    if (role === 'Reporter') {
+      return status === 'OPEN';
+    }
+
+    // Others (Dispatcher, Technician) can edit anything not CLOSED
+    return true;
   }
 
   editTicket(ticketId: number): void {
@@ -236,7 +357,12 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   deleteTicket(ticket: MyTicketItem): void {
     if (!this.isEditable(ticket)) {
-      this.showPopup('Warning', 'Cannot delete a closed ticket', 'warning');
+      const role = this.authService.getCurrentUserRole();
+      if (role === 'Reporter' && ticket.status?.toUpperCase() !== 'OPEN') {
+        this.showPopup('Permission Denied', 'Reporters can only delete tickets with OPEN status.', 'warning');
+      } else {
+        this.showPopup('Warning', 'Cannot delete a closed ticket', 'warning');
+      }
       return;
     }
 

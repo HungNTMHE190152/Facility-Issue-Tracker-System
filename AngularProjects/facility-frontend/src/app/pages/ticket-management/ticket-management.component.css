@@ -249,6 +249,36 @@
   letter-spacing: -0.02em;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.btn-back {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-main);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.btn-back:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  transform: translateX(-4px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+}
+
+.btn-back svg { width: 20px; height: 20px; }
+
 /* Glass Buttons */
 .btn-primary-glow {
   background: linear-gradient(135deg, var(--primary), #6366f1);
@@ -367,7 +397,7 @@
 
 .ticket-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1.25rem;
   align-items: start;
 }
@@ -545,6 +575,61 @@
   border-color: var(--primary-light);
   transform: translateX(-4px);
   box-shadow: 0 6px 10px -1px rgba(79, 70, 229, 0.1);
+}
+
+/* Pagination Styles */
+.pagination-footer {
+  margin-top: 3rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  padding: 1rem 2rem;
+  border-radius: 2rem;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.btn-pagination {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: var(--text-main);
+  padding: 0.5rem 1.25rem;
+  border-radius: 2rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.btn-pagination svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.btn-pagination:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+  border-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.btn-pagination:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.page-info {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 1rem;
 }
 
 /* Scrollbar styling */

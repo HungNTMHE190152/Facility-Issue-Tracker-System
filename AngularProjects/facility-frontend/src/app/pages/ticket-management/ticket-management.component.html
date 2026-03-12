@@ -28,7 +28,14 @@
 
   <main class="page-inner animate-fade-in-up">
     <div class="header-row">
-      <h2 class="page-title">Ticket Management</h2>
+      <div class="header-left">
+        <a routerLink="/dispatcher-dashboard" class="btn-back" title="Back to Dashboard">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+          </svg>
+        </a>
+        <h2 class="page-title">Ticket Management</h2>
+      </div>
     </div>
 
     <!-- Display alert message if any -->
@@ -77,7 +84,7 @@
         <p>No tickets found in the system.</p>
       </div>
 
-      <div class="glass-card ticket-card" *ngFor="let ticket of tickets">
+      <div class="glass-card ticket-card" *ngFor="let ticket of paginatedTickets">
         <div class="ticket-top">
           <h3 [title]="ticket.title">{{ truncateText(ticket.title, 20) }}</h3>
           <span class="t-status" [ngClass]="ticket.status.toLowerCase()">{{ ticket.status }}</span>
@@ -120,13 +127,21 @@
       </div>
     </div>
 
-    <div class="bottom-actions">
-      <a routerLink="/dispatcher-dashboard" class="back-to-home">
-        <svg viewBox="0 0 24 24" fill="none" class="arrow-icon-back" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+    <!-- Pagination Controls -->
+    <div class="pagination-footer" *ngIf="tickets.length > pageSize">
+      <button class="btn-pagination" [disabled]="currentPage === 1" (click)="changePage(currentPage - 1)">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
-        Back to Dashboard
-      </a>
+        Prev
+      </button>
+      <span class="page-info">Page <span class="text-glow">{{ currentPage }}</span> of <span class="text-glow">{{ totalPages }}</span></span>
+      <button class="btn-pagination" [disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1)">
+        Next
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
     </div>
 
   </main>
