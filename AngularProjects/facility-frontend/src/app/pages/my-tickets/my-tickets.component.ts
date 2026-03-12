@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { TicketService } from '../../services/ticket.service';
 import { CategoryOption, MyTicketFilters, MyTicketItem } from '../../models/ticket.models';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-my-tickets',
@@ -15,6 +16,7 @@ import { CategoryOption, MyTicketFilters, MyTicketItem } from '../../models/tick
   styleUrl: './my-tickets.component.css'
 })
 export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly apiBaseUrl = environment.apiUrl;
   tickets: MyTicketItem[] = [];
   categories: CategoryOption[] = [];
   loading = false;
@@ -44,6 +46,19 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
   ticketToDelete: MyTicketItem | null = null;
   alertMessage = '';
   isError = false;
+  editSelectedImageName = '';
+  lightboxSrc: string | null = null;
+
+  openLightbox(src: string): void {
+    this.lightboxSrc = src;
+  }
+
+  closeLightbox(): void {
+    this.lightboxSrc = null;
+  }
+
+  private readonly maxImageBytes = 2 * 1024 * 1024;
+  private readonly targetImageDataUrlLength = 1_200_000;
 
   constructor(
     private ticketService: TicketService,
@@ -113,7 +128,12 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
       }))
       .subscribe({
         next: (res) => {
-          this.tickets = [...res];
+          this.tickets = (res ?? []).map(ticket => ({
+            ...ticket,
+            location: this.getLocationValue(ticket),
+            imageBefore: this.getImagePath(ticket, 'imageBefore'),
+            imageAfter: this.getImagePath(ticket, 'imageAfter')
+          }));
           this.currentPage = 1;
           this.cdr.detectChanges();
         },
@@ -161,12 +181,26 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   openViewModal(ticket: MyTicketItem): void {
-    this.currentDetail = ticket;
-    this.showViewModal = true;
+    this.ticketService.getTicketById(ticket.ticketId).subscribe({
+      next: (detail: any) => {
+        this.currentDetail = {
+          ...detail,
+          location: this.getLocationValue(detail),
+          imageBefore: this.getImagePath(detail, 'imageBefore'),
+          imageAfter: this.getImagePath(detail, 'imageAfter')
+        };
+        this.showViewModal = true;
+      },
+      error: () => this.showAlert('Cannot load ticket details', true)
+    });
   }
 
   openEditModal(ticket: MyTicketItem): void {
-    this.editData = { ...ticket };
+    this.editData = {
+      ...ticket,
+      location: this.getLocationValue(ticket)
+    };
+    this.editSelectedImageName = this.editData.imageBefore ? 'Current image' : '';
     this.showEditModal = true;
   }
 
@@ -182,6 +216,7 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
     this.currentDetail = null;
     this.editData = null;
     this.ticketToDelete = null;
+    this.editSelectedImageName = '';
   }
 
   submitEdit(): void {
@@ -224,6 +259,91 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   onImageError(event: any): void {
     event.target.style.display = 'none';
+  }
+
+  async onEditImageSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      this.showAlert('Please select an image file', true);
+      input.value = '';
+      return;
+    }
+    if (file.size > this.maxImageBytes) {
+      this.showAlert('Image size must be <= 2MB', true);
+      input.value = '';
+      return;
+    }
+    this.editSelectedImageName = file.name;
+    try {
+      this.editData.imageBefore = await this.compressImageToDataUrl(file);
+      this.cdr.detectChanges();
+    } catch {
+      this.showAlert('Cannot process image file', true);
+      this.clearEditImage(input);
+    }
+  }
+
+  clearEditImage(input?: HTMLInputElement): void {
+    if (this.editData) this.editData.imageBefore = null;
+    this.editSelectedImageName = '';
+    if (input) input.value = '';
+    this.cdr.detectChanges();
+  }
+
+  private async compressImageToDataUrl(file: File): Promise<string> {
+    const img = await this.readImage(file);
+    const maxDim = 1280;
+    const ratio = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * ratio));
+    const h = Math.max(1, Math.round(img.height * ratio));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, 0, 0, w, h);
+    let quality = 0.86;
+    let dataUrl = canvas.toDataURL('image/jpeg', quality);
+    while (dataUrl.length > this.targetImageDataUrlLength && quality > 0.5) {
+      quality -= 0.08;
+      dataUrl = canvas.toDataURL('image/jpeg', quality);
+    }
+    return dataUrl;
+  }
+
+  private readImage(file: File): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Invalid image')); };
+      img.src = url;
+    });
+  }
+
+  getLocationValue(ticket: any): string {
+    const value = ticket?.location ?? ticket?.Location;
+    if (typeof value !== 'string') return 'N/A';
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : 'N/A';
+  }
+
+  getImagePath(ticket: any, key: 'imageBefore' | 'imageAfter'): string | null {
+    if (!ticket) return null;
+    const camel = ticket[key];
+    const pascal = ticket[key === 'imageBefore' ? 'ImageBefore' : 'ImageAfter'];
+    const value = camel ?? pascal;
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  getImageUrl(path: string | null | undefined): string {
+    if (!path) return '';
+    if (/^data:image\//i.test(path)) return path;
+    if (/^https?:\/\//i.test(path)) return path;
+    return `${this.apiBaseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
   }
 
   isEditable(ticket: MyTicketItem): boolean {
