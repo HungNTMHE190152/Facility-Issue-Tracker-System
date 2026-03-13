@@ -1,8 +1,14 @@
 <div class="ticket-page">
   <div class="ticket-card">
     <div class="header-row">
-      <h2>Create Ticket</h2>
-      <a routerLink="/tickets/my" class="back-link">← Back</a>
+      <div class="header-left">
+        <a routerLink="/tickets/my" class="btn-back" title="Back to My Tickets">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+          </svg>
+        </a>
+        <h2 class="page-title">Create Ticket</h2>
+      </div>
     </div>
 
     <form (ngSubmit)="submit()" class="ticket-form">
@@ -79,7 +85,6 @@
       </div>
 
       <div class="action-row">
-        <a routerLink="/my-ticket" class="btn-back">Back</a>
         <button type="submit" [disabled]="loading">
           {{ loading ? 'Creating...' : 'Create Ticket' }}
         </button>

@@ -14,10 +14,12 @@ export class AuthService {
   private isLoggedInSubject = new BehaviorSubject<boolean>(this.hasToken());
   private userNameSubject = new BehaviorSubject<string>('');
   private userRoleSubject = new BehaviorSubject<string>('');
+  private userEmailSubject = new BehaviorSubject<string>('');
 
   isLoggedIn$ = this.isLoggedInSubject.asObservable();
   userName$ = this.userNameSubject.asObservable();
   userRole$ = this.userRoleSubject.asObservable();
+  userEmail$ = this.userEmailSubject.asObservable();
 
   constructor(private http: HttpClient) {
     this.loadUserFromStorage();
@@ -31,15 +33,18 @@ export class AuthService {
     const token = localStorage.getItem('token');
     const fullName = localStorage.getItem('fullName') || '';
     const role = localStorage.getItem('role') || 'Reporter';
+    const email = localStorage.getItem('email') || '';
 
     if (token) {
       this.isLoggedInSubject.next(true);
       this.userNameSubject.next(fullName.trim() || 'User');
       this.userRoleSubject.next(role.trim());
+      this.userEmailSubject.next(email.trim());
     } else {
       this.isLoggedInSubject.next(false);
       this.userNameSubject.next('');
       this.userRoleSubject.next('');
+      this.userEmailSubject.next('');
     }
   }
 
@@ -59,9 +64,11 @@ export class AuthService {
           localStorage.setItem('token', res.token);
           localStorage.setItem('fullName', res.fullName?.trim() || 'User');
           localStorage.setItem('role', res.role?.trim() || 'Reporter');
+          localStorage.setItem('email', res.email?.trim() || credentials.email);
 
           this.userNameSubject.next(res.fullName?.trim() || 'User');
           this.userRoleSubject.next(res.role?.trim() || 'Reporter');
+          this.userEmailSubject.next(res.email?.trim() || credentials.email);
           this.isLoggedInSubject.next(true);
         }
       }),
@@ -73,12 +80,13 @@ export class AuthService {
   }
 
   logout(): void {
+    this.userNameSubject.next('');
+    this.userRoleSubject.next('');
+    this.userEmailSubject.next('');
     localStorage.removeItem('token');
     localStorage.removeItem('fullName');
     localStorage.removeItem('role');
-    this.isLoggedInSubject.next(false);
-    this.userNameSubject.next('');
-    this.userRoleSubject.next('');
+    localStorage.removeItem('email');
   }
 
   getProfile(): Observable<any> {
@@ -136,6 +144,19 @@ export class AuthService {
 
   getCurrentUserRole(): string {
     return this.userRoleSubject.value || 'Reporter';
+  }
+
+  getCurrentUserEmail(): string {
+    return this.userEmailSubject.value || '';
+  }
+
+  getCachedRecentTickets(): any[] {
+    const cached = localStorage.getItem('recentTickets');
+    return cached ? JSON.parse(cached) : [];
+  }
+
+  setCachedRecentTickets(tickets: any[]): void {
+    localStorage.setItem('recentTickets', JSON.stringify(tickets));
   }
 
   isAuthenticated(): boolean {

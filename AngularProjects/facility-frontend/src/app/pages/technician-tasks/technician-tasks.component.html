@@ -1,0 +1,138 @@
+<div class="tasks-page">
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+  <div class="grid-overlay"></div>
+
+  <nav class="glass-nav">
+    <div class="nav-content">
+      <a routerLink="/technician-dashboard" class="logo">
+        <div class="logo-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <span class="logo-text">Technician <span class="text-glow">Portal</span></span>
+      </a>
+
+      <div class="nav-links">
+        <div class="auth-section">
+          <a routerLink="/technician-dashboard" class="nav-item">Dashboard</a>
+          <a routerLink="/technician/tasks" class="nav-item active">Assigned Tasks</a>
+          <span class="welcome-text">Welcome, <strong>{{ userName }}</strong></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="page-inner animate-fade-in-up">
+    <div class="header-row">
+      <div class="header-left">
+        <a routerLink="/technician-dashboard" class="btn-back" title="Back to Dashboard">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+          </svg>
+        </a>
+        <h2 class="page-title">Tasks Management</h2>
+      </div>
+    </div>
+
+    <div class="glass-card filter-card">
+      <div class="filter-grid">
+        <div class="filter-input-wrapper">
+          <label>Search (ID/Title)</label>
+          <input type="text" class="dark-input" placeholder="Search..." [(ngModel)]="filters.search" (keyup.enter)="loadTickets()">
+        </div>
+        <div class="filter-input-wrapper">
+          <label>Status</label>
+          <select class="dark-input" [(ngModel)]="filters.status" (ngModelChange)="onFilterChanged()">
+            <option value="">All tickets</option>
+            <option value="OPEN">New (Open)</option>
+            <option value="ASSIGNED">Assigned</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="RESOLVED">Resolved</option>
+          </select>
+        </div>
+        <div class="filter-input-wrapper">
+            <label>Priority</label>
+            <select class="dark-input" [(ngModel)]="filters.priority" (ngModelChange)="onFilterChanged()">
+              <option [ngValue]="null">All Priority</option>
+              <option [ngValue]="1">Low</option>
+              <option [ngValue]="2">Medium</option>
+              <option [ngValue]="3">High</option>
+            </select>
+          </div>
+        <div class="filter-buttons">
+          <button class="btn-primary-glow compact" (click)="loadTickets()">Apply</button>
+          <button class="btn-secondary-glass compact" (click)="resetFilters()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-container glass-card">
+      <table class="tasks-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Reporter</th>
+            <th>Technician</th>
+            <th>Location</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Created At</th>
+            <th>SLA 3h</th>
+            <th class="text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="loading" class="loading-row">
+            <td colspan="10">Loading tasks...</td>
+          </tr>
+          <tr *ngIf="!loading && tickets.length === 0" class="empty-row">
+            <td colspan="10">No tasks found.</td>
+          </tr>
+          
+          <tr *ngFor="let t of tickets" 
+              [class.overdue-row]="t.isOverdue && (t.status === 'ASSIGNED' || t.status === 'OPEN')"
+              [class.my-task-row]="t.isMyTask">
+            <td><span class="id-badge">#{{ t.ticketId }}</span></td>
+            <td><div class="cell-title" (click)="openViewModal(t)">{{ t.title }}</div></td>
+            <td>{{ t.reporterName || 'Unknown' }}</td>
+            <td>{{ t.technicianName || 'Unassigned' }}</td>
+            <td>{{ t.location }}</td>
+            <td><span class="p-badge" [ngClass]="getPriorityLabel(t.priority).toLowerCase()">{{ getPriorityLabel(t.priority) }}</span></td>
+            <td><span class="s-badge" [ngClass]="t.status.toLowerCase()">{{ t.status }}</span></td>
+            <td>{{ t.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+            <td>
+              <div *ngIf="t.timeLeftStr && (t.status === 'ASSIGNED' || t.status === 'OPEN')" class="countdown-cell" [class.is-danger]="t.isOverdue">
+                {{ t.timeLeftStr }}
+              </div>
+            </td>
+            <td class="text-center">
+              <div class="action-cell">
+                <button *ngIf="t.status === 'ASSIGNED' || t.status === 'OPEN'" class="accept-btn-check" (click)="acceptTicket(t)">Accept</button>
+                <button class="action-btn" (click)="openViewModal(t)">Detail</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="modal-backdrop" *ngIf="showViewModal" (click)="closeModals()">
+  <div class="modal-content glass-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Task Details #{{currentDetail?.ticketId}}</h3>
+      <button class="close-btn" (click)="closeModals()">&times;</button>
+    </div>
+    <div class="modal-body" *ngIf="currentDetail">
+       <p><strong>Title:</strong> {{ currentDetail.title }}</p>
+       <p><strong>Description:</strong> {{ currentDetail.description }}</p>
+       <p><strong>Location:</strong> {{ currentDetail.location }}</p>
+       <p><strong>Status:</strong> {{ currentDetail.status }}</p>
+    </div>
+  </div>
+</div>

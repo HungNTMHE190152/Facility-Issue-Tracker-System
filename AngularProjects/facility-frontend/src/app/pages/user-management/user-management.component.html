@@ -7,17 +7,16 @@
 
     <div class="content-z-index">
         <div class="header-actions">
-            <div>
-                <button class="btn btn-secondary back-btn mb-3" (click)="goBack()">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        class="btn-icon">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            <div class="header-left">
+                <a class="btn-back" (click)="goBack()" title="Back to Manager">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
                     </svg>
-                    Back to Manager
-                </button>
-                <h1 class="page-title">User Management</h1>
-                <p class="page-subtitle">View, add, edit, or delete users in the system.</p>
+                </a>
+                <div>
+                    <h1 class="page-title">User Management</h1>
+                    <p class="page-subtitle">View, add, edit, or delete users in the system.</p>
+                </div>
             </div>
             <button class="btn btn-primary premium-btn" (click)="openCreateModal()">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="btn-icon">

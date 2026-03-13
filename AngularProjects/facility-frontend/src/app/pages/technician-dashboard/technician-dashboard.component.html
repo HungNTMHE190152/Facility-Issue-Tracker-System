@@ -1,0 +1,123 @@
+<div class="dashboard-wrapper">
+    <!-- Animated Light Orbs -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+    <div class="grid-overlay"></div>
+
+    <div class="content-z-index">
+        <!-- Premium Navbar -->
+        <header class="glass-nav">
+            <div class="nav-content">
+                <a routerLink="/" class="logo">
+                    <div class="logo-box">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <span class="logo-text">Technician<span class="text-glow">Portal</span></span>
+                </a>
+
+                <div class="user-info">
+                    <div class="welcome-box">
+                        <span class="welcome-label">Welcome back,</span>
+                        <span class="welcome-name">{{ userName }}</span>
+                    </div>
+                    <button class="logout-btn" (click)="logout()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                        </svg>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard-main page-inner">
+            <!-- Welcome Section -->
+            <div class="welcome-section animate-fade-in-up">
+                <div class="badge-wrapper">
+                    <span class="badge">🚀 System Efficiency</span>
+                </div>
+                <h1 class="page-title">
+                    Manage with <br />
+                    <span class="gradient-text animated-gradient">Ultimate Focus.</span>
+                </h1>
+                <p class="hero-desc">Bắt đầu ngày làm việc của bạn. Kiểm tra và tiếp nhận các yêu cầu xử lý cơ sở vật
+                    chất ngay lập tức.</p>
+            </div>
+
+            <!-- Enhanced Action Cards -->
+            <div class="cards-grid">
+                <!-- Acceptance SLA Card -->
+                <div class="glass-card action-card floating">
+                    <div class="card-glow-bg cyan"></div>
+                    <div class="card-icon cyan-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                        </svg>
+                    </div>
+                    <div class="card-body">
+                        <span class="label">Priority Task</span>
+                        <h3>New Requests</h3>
+                        <p>Bạn có <strong>3 giờ</strong> để chấp nhận các yêu cầu mới trước khi bị ghi nhận trễ hạn SLA.
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn-primary-glow" routerLink="/technician/tasks" [queryParams]="{status: 'ASSIGNED'}">
+                            Accept Tickets
+                            <svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5">
+                                <path d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Active Work Card -->
+                <div class="glass-card action-card floating-delayed">
+                    <div class="card-glow-bg purple"></div>
+                    <div class="card-icon purple-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path
+                                d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
+                        </svg>
+                    </div>
+                    <div class="card-body">
+                        <span class="label">Ongoing Operations</span>
+                        <h3>Active Tickets</h3>
+                        <p>Quản lý và cập nhật tiến độ công việc cho các thiết bị đang được bạn sửa chữa.</p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn-secondary-glass" routerLink="/technician/tasks"
+                            [queryParams]="{status: 'IN_PROGRESS'}">
+                            View Assignments
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Profile Card -->
+                <div class="glass-card action-card floating">
+                    <div class="card-glow-bg amber"></div>
+                    <div class="card-icon amber-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg>
+                    </div>
+                    <div class="card-body">
+                        <span class="label">Your Identity</span>
+                        <h3>My Profile</h3>
+                        <p>Cập nhật thông tin cá nhân, xem thống kê hiệu suất và thay đổi mật khẩu tài khoản.</p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn-secondary-glass" routerLink="/profile">
+                            Account Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
