@@ -7,6 +7,7 @@ import { finalize } from 'rxjs/operators';
 import { TicketService } from '../../services/ticket.service';
 import { CategoryOption, MyTicketFilters, MyTicketItem } from '../../models/ticket.models';
 import { environment } from '../../../environments/environment';
+import { NotificationService } from '../../services/notification.service';
 
 @Component({
   selector: 'app-ticket-management',
@@ -32,7 +33,8 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
 
   constructor(
     private ticketService: TicketService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -152,15 +154,15 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
         },
         error: (err) => {
           if (err?.status === 401) {
-            alert('Your session has expired. Please log in again.');
+            this.notificationService.error('Your session has expired. Please log in again.');
             return;
           }
           if (err?.status === 403) {
-            alert('You do not have permission to access all tickets.');
+            this.notificationService.error('You do not have permission to access all tickets.');
             return;
           }
 
-          alert(err?.error?.message || err?.error || 'Cannot load tickets');
+          this.notificationService.error(err?.error?.message || err?.error || 'Cannot load tickets');
         }
       });
   }
@@ -298,9 +300,11 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   showAlert(msg: string, isError: boolean): void {
-    this.alertMessage = msg;
-    this.isError = isError;
-    setTimeout(() => this.alertMessage = '', 3000);
+    if (isError) {
+      this.notificationService.error(msg);
+    } else {
+      this.notificationService.success(msg);
+    }
   }
 
   onImageError(event: any): void {

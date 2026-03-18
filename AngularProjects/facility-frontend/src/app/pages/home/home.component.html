@@ -53,9 +53,9 @@
                     Experience a seamless, intelligent helpdesk solution. Track, assign, and resolve issues at lighting
                     speed. Empower your team and keep your facilities running flawlessly.
                 </p>
-                <div class="hero-actions animate-fade-in-up" style="animation-delay: 0.4s">
+                <div *ngIf="!isLoggedIn" class="hero-actions animate-fade-in-up" style="animation-delay: 0.4s">
                     <a routerLink="/register" class="btn-primary-glow large">
-                        Start tracking now
+                        Register
                         <svg class="arrow-icon" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd"
                                 d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
@@ -63,7 +63,7 @@
                         </svg>
                     </a>
                     <a routerLink="/login" class="btn-secondary-glass large group">
-                        Enter Dashboard
+                        Login
                     </a>
                 </div>
             </div>

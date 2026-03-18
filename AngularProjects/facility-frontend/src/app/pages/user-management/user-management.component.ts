@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserService, User, Role } from '../../services/user.service';
+import { NotificationService } from '../../services/notification.service';
 
 @Component({
     selector: 'app-user-management',
@@ -32,10 +33,6 @@ export class UserManagementComponent implements OnInit {
     showConfirmModal: boolean = false;
     userToDelete: User | null = null;
 
-    // Alert
-    alertMessage: string = '';
-    isError: boolean = false;
-
     // Pagination
     currentPage: number = 1;
     itemsPerPage: number = 10;
@@ -57,6 +54,7 @@ export class UserManagementComponent implements OnInit {
 
     constructor(
         @Inject(UserService) private userService: UserService,
+        private notificationService: NotificationService,
         private cdr: ChangeDetectorRef,
         private router: Router
     ) { 
@@ -78,12 +76,19 @@ export class UserManagementComponent implements OnInit {
         this.userService.getUsers().subscribe({
             next: (res) => {
                 this.users = res;
-                this.currentPage = 1; // Reset to page 1
+                
+                // Maintain current page, but ensure it's still valid
+                if (this.currentPage > this.totalPages && this.totalPages > 0) {
+                    this.currentPage = this.totalPages;
+                } else if (this.users.length > 0 && this.currentPage < 1) {
+                    this.currentPage = 1;
+                }
+
                 this.isLoading = false;
                 this.cdr.detectChanges();
             },
             error: (err) => {
-                this.showAlert('Error loading users', true);
+                this.notificationService.error('Error loading users');
                 this.isLoading = false;
                 this.cdr.detectChanges();
             }
@@ -119,7 +124,7 @@ export class UserManagementComponent implements OnInit {
 
     openEditModal(user: User) {
         if (this.currentUserRole === 'Dispatcher' && user.roleName === 'Dispatcher') {
-            this.showAlert('You do not have permission to modify another Dispatcher.', true);
+            this.notificationService.error('You do not have permission to modify another Dispatcher.');
             return;
         }
         
@@ -136,8 +141,35 @@ export class UserManagementComponent implements OnInit {
     }
 
     saveUser() {
-        if (!this.currentUser.fullName || !this.currentUser.email || !this.currentUser.roleId) {
-            this.showAlert('Please fill in all required fields.', true);
+        // Granular Validation
+        if (!this.currentUser.fullName || !this.currentUser.fullName.trim()) {
+            this.notificationService.error('Full Name is required.');
+            return;
+        }
+
+        if (this.currentUser.fullName.length > 30) {
+            this.notificationService.error(`Full Name is too long (${this.currentUser.fullName.length}/30).`);
+            return;
+        }
+
+        if (!this.currentUser.email || !this.currentUser.email.trim()) {
+            this.notificationService.error('Email address is required.');
+            return;
+        }
+
+        const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,10}$/;
+        if (!emailPattern.test(this.currentUser.email)) {
+            this.notificationService.error('Invalid email format (e.g., user@domain.com).');
+            return;
+        }
+
+        if (!this.currentUser.roleId) {
+            this.notificationService.error('Please select a Role for the user.');
+            return;
+        }
+
+        if (!this.isEditMode && (!this.currentUser.password || !this.currentUser.password.trim())) {
+            this.notificationService.error('Password is required for new accounts.');
             return;
         }
 
@@ -153,19 +185,19 @@ export class UserManagementComponent implements OnInit {
 
             this.userService.updateUser(this.currentUser.userId!, updateData).subscribe({
                 next: (res) => {
-                    this.showAlert('User updated successfully', false);
+                    this.notificationService.success('User updated successfully');
                     this.closeModal();
                     this.loadUsers();
                 },
                 error: (err) => {
-                    this.showAlert(err.error?.message || 'Error updating user', true);
+                    this.notificationService.error(err.error?.message || 'Error updating user');
                     this.isLoading = false;
                     this.cdr.detectChanges();
                 }
             });
         } else {
             if (!this.currentUser.password) {
-                this.showAlert('Password is required when creating a new user', true);
+                this.notificationService.error('Password is required when creating a new user');
                 this.isLoading = false;
                 this.cdr.detectChanges();
                 return;
@@ -180,12 +212,12 @@ export class UserManagementComponent implements OnInit {
 
             this.userService.createUser(createData).subscribe({
                 next: (res) => {
-                    this.showAlert('New user created successfully', false);
+                    this.notificationService.success('New user created successfully');
                     this.closeModal();
                     this.loadUsers();
                 },
                 error: (err) => {
-                    this.showAlert(err.error?.message || 'Error creating user', true);
+                    this.notificationService.error(err.error?.message || 'Error creating user');
                     this.isLoading = false;
                     this.cdr.detectChanges();
                 }
@@ -195,7 +227,7 @@ export class UserManagementComponent implements OnInit {
 
     deleteUser(user: User) {
         if (this.currentUserRole === 'Dispatcher' && user.roleName === 'Dispatcher') {
-            this.showAlert('You do not have permission to delete another Dispatcher.', true);
+            this.notificationService.error('You do not have permission to delete another Dispatcher.');
             return;
         }
 
@@ -218,25 +250,18 @@ export class UserManagementComponent implements OnInit {
         this.userService.deleteUser(this.userToDelete.userId).subscribe({
             next: (res) => {
                 this.isLoading = false;
-                this.showAlert('User deleted successfully', false);
+                this.notificationService.success('User deleted successfully');
                 this.closeConfirmModal();
                 this.loadUsers();
             },
             error: (err) => {
                 console.error("Delete user error:", err);
                 this.isLoading = false;
-                this.showAlert(err.error?.message || 'Cannot delete user because they have associated data.', true);
+                this.notificationService.error(err.error?.message || 'Cannot delete user because they have associated data.');
                 this.closeConfirmModal();
                 this.cdr.detectChanges();
             }
         });
     }
 
-    showAlert(msg: string, isErr: boolean) {
-        this.alertMessage = msg;
-        this.isError = isErr;
-        setTimeout(() => {
-            this.alertMessage = '';
-        }, 5000);
-    }
 }

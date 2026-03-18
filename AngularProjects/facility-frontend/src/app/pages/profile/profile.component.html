@@ -1,4 +1,12 @@
 <div class="profile-wrapper">
+    <!-- Thông báo Toast (Hiển thị khi thành công) -->
+    <div *ngIf="successMessage" class="toast-notification toast-success">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="toast-message">{{ successMessage }}</span>
+    </div>
+
     <div class="bg-shape shape-1"></div>
     <div class="bg-shape shape-2"></div>
 
@@ -6,6 +14,18 @@
         <div class="profile-header-actions">
             <h2 class="page-title">My Profile</h2>
             <div class="action-buttons">
+                <!-- Nút Back kiểu icon ô vuông -->
+                <a *ngIf="!isEditing" routerLink="/home" class="btn-back-square">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="back-icon-svg">
+                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </a>
+                <a *ngIf="isEditing" (click)="toggleEdit()" class="btn-back-square clickable">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="back-icon-svg">
+                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </a>
+
                 <a routerLink="/change-password" class="btn-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon-small" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
@@ -30,7 +50,7 @@
                 <div class="avatar-container">
                     <div class="avatar-ring">
                         <div class="avatar-inner">
-                            <span class="avatar-text">JD</span>
+                            <span class="avatar-text">{{ getInitials(user?.fullName || '') }}</span>
                             <div class="avatar-overlay">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="camera-icon" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
@@ -46,23 +66,32 @@
             </div>
 
             <div class="profile-content">
-                <div *ngIf="successMessage" class="alert-success"
-                    style="padding: 10px; background-color: #d4edda; color: #155724; border-radius: 4px; margin-bottom: 15px; text-align: center; font-weight: 500;">
-                    {{ successMessage }}
+                <!-- Loading State -->
+                <div *ngIf="isLoading" class="loading-state" style="text-align: center; padding: 2rem;">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 1rem; color: #64748b;">Loading profile...</p>
                 </div>
-                <div class="info-grid" *ngIf="user; else loadingState">
+
+                <!-- Error State -->
+                <div *ngIf="errorMessage && !isLoading" class="error-state" style="text-align: center; padding: 2rem;">
+                    <p style="color: #dc2626; font-weight: 500;">{{ errorMessage }}</p>
+                    <button (click)="loadProfile()" class="btn-secondary" style="margin-top: 1rem; padding: 8px 16px;">Retry</button>
+                </div>
+
+                <!-- Main Grid (chỉ hiện khi có user) -->
+                <div class="info-grid" *ngIf="user && !isLoading">
                     <!-- View Mode -->
                     <ng-container *ngIf="!isEditing">
                         <div class="info-group">
                             <h3 class="info-label">Full Name</h3>
-                            <p class="info-value">{{ user.fullName }}</p>
+                            <p class="info-value">{{ user.fullName || 'N/A' }}</p>
                         </div>
 
                         <div class="info-group">
                             <h3 class="info-label">Role</h3>
                             <div class="role-badge reporter">
                                 <span class="pulse-dot"></span>
-                                {{ user.role }}
+                                {{ user.role || 'User' }}
                             </div>
                         </div>
 
@@ -77,14 +106,14 @@
                         <div class="info-group">
                             <label class="info-label" for="fullName">Full Name</label>
                             <input type="text" id="fullName" [(ngModel)]="editData.fullName" class="form-control"
-                                style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd; background: #fafafa; font-size: 1rem; color: #333; margin-top: 5px;" />
+                                style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; font-size: 1rem; color: #1e293b; margin-top: 5px;" />
                         </div>
 
                         <div class="info-group">
                             <h3 class="info-label">Role</h3>
                             <div class="role-badge reporter" style="margin-top: 5px;">
                                 <span class="pulse-dot"></span>
-                                {{ user.role }}
+                                {{ user.role || 'User' }}
                             </div>
                         </div>
 
@@ -94,26 +123,28 @@
                         </div>
 
                         <div class="edit-actions"
-                            style="grid-column: 1 / -1; display: flex; gap: 10px; margin-top: 15px;">
-                            <button type="button" class="btn-primary" (click)="saveProfile()" [disabled]="isSaving"
-                                style="padding: 10px 20px;">
-                                {{ isSaving ? 'Saving...' : 'Save Changes' }}
+                            style="grid-column: 1 / -1; display: flex; gap: 10px; margin-top: 20px;">
+                            <button type="button" class="btn-primary" (click)="saveProfile()" [disabled]="isSaving || isSaved"
+                                [class.btn-success]="isSaved"
+                                style="padding: 10px 24px; display: flex; align-items: center; gap: 8px;">
+                                <span *ngIf="isSaving">Saving...</span>
+                                <ng-container *ngIf="isSaved">
+                                    <svg xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span>Saved</span>
+                                </ng-container>
+                                <span *ngIf="!isSaving && !isSaved">Save Changes</span>
                             </button>
-                            <button type="button" class="btn-secondary" (click)="toggleEdit()" [disabled]="isSaving"
-                                style="padding: 10px 20px;">
+                            <button type="button" class="btn-secondary" (click)="toggleEdit()" [disabled]="isSaving || isSaved"
+                                style="padding: 10px 24px;">
                                 Cancel
                             </button>
                         </div>
                     </ng-container>
                 </div>
-                <ng-template #loadingState>
-                    <div class="info-grid">
-                        <p *ngIf="isLoading">Loading profile...</p>
-                        <p *ngIf="errorMessage" style="color: red;">{{ errorMessage }}</p>
-                    </div>
-                </ng-template>
 
-                <div class="activity-section">
+                <div class="activity-section" *ngIf="!isEditing">
                     <div class="activity-header">
                         <h3 class="section-title">Recent Tickets Activity</h3>
                         <button class="view-all-btn">View All</button>
@@ -174,24 +205,5 @@
             </div>
         </div>
 
-        <div style="margin-top: 20px; display: flex; justify-content: flex-start;">
-            <!-- Back to Home (View Mode) -->
-            <a *ngIf="!isEditing" routerLink="/home" class="btn-secondary"
-                style="padding: 10px 20px; border-radius: 8px; text-decoration: none; display: flex; align-items: center; gap: 8px; font-weight: 500; color: #4b5563; background-color: #f3f4f6; border: 1px solid #e5e7eb; transition: all 0.2s;">
-                <svg xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                </svg>
-                Back to Home
-            </a>
-
-            <!-- Back to Profile (Edit Mode) -->
-            <a *ngIf="isEditing" (click)="toggleEdit()" class="btn-secondary"
-                style="padding: 10px 20px; border-radius: 8px; text-decoration: none; display: flex; align-items: center; gap: 8px; font-weight: 500; color: #4b5563; background-color: #f3f4f6; border: 1px solid #e5e7eb; transition: all 0.2s; cursor: pointer;">
-                <svg xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                </svg>
-                Back to Profile
-            </a>
-        </div>
     </div>
 </div>
