@@ -27,9 +27,6 @@
             </button>
         </div>
 
-        <div *ngIf="alertMessage" class="alert" [ngClass]="{'alert-error': isError, 'alert-success': !isError}">
-            {{ alertMessage }}
-        </div>
 
         <!-- Table Container -->
         <div class="glass-card table-container">
@@ -132,13 +129,13 @@
             <div class="form-group">
                 <label>Full Name</label>
                 <input type="text" [(ngModel)]="currentUser.fullName" class="glass-input"
-                    placeholder="Enter full name...">
+                    placeholder="Enter full name..." maxlength="30">
             </div>
 
             <div class="form-group">
                 <label>Email</label>
                 <input type="email" [(ngModel)]="currentUser.email" class="glass-input"
-                    placeholder="Enter email address...">
+                    placeholder="Enter email address..." maxlength="100">
             </div>
 
             <div class="form-group" *ngIf="!isEditMode">

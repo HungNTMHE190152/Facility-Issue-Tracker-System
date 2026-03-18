@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.services';
+import { NotificationService } from '../../services/notification.service';
 
 @Component({
   selector: 'app-login',
@@ -16,7 +17,12 @@ export class LoginComponent implements OnInit {
   email = '';
   password = '';
 
-  constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute) { }
+  constructor(
+    private auth: AuthService,
+    private router: Router,
+    private route: ActivatedRoute,
+    private notificationService: NotificationService
+  ) { }
 
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
@@ -30,7 +36,7 @@ export class LoginComponent implements OnInit {
     const rawPassword = htmlPassword || this.password;
 
     if (!rawEmail || !rawPassword) {
-      alert('Enter email and password');
+      this.notificationService.warning('Enter email and password');
       return;
     }
 
@@ -56,7 +62,7 @@ export class LoginComponent implements OnInit {
             this.router.navigate(['/']); // hoặc '/profile' tùy bạn
           }
         } else {
-          alert('Login successfully but do not receive a token from the server.');
+          this.notificationService.error('Login successfully but do not receive a token from the server.');
         }
       },
       error: (err) => {
@@ -71,7 +77,7 @@ export class LoginComponent implements OnInit {
           msg = err.error.message;
         }
 
-        alert(msg);
+        this.notificationService.error(msg);
       }
     });
   }

@@ -33,7 +33,7 @@
               <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
             </svg>
             <input id="name" name="fullName" type="text" required [(ngModel)]="user.fullName" class="form-input"
-              placeholder="John Doe">
+              placeholder="John Doe" maxlength="30">
           </div>
         </div>
 
@@ -74,29 +74,6 @@
             </svg>
             <input id="confirmPassword" name="confirmPassword" type="password" required
               [(ngModel)]="user.confirmPassword" class="form-input" placeholder="Re-enter password">
-          </div>
-        </div>
-
-        <!-- Role -->
-        <div class="input-group full-width">
-          <label for="role" class="input-label">I am a...</label>
-          <div class="input-wrapper select-wrapper">
-            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            <select id="role" name="role" [(ngModel)]="user.role" class="form-input custom-select">
-              <option value="REPORTER">Student / Staff (Reporter)</option>
-              <option value="TECHNICIAN">Technician</option>
-            </select>
-            <div class="select-arrow">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd"
-                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                  clip-rule="evenodd" />
-              </svg>
-            </div>
           </div>
         </div>
 
