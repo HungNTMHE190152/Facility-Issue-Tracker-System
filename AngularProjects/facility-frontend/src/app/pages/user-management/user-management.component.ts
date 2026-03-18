@@ -18,6 +18,10 @@ export class UserManagementComponent implements OnInit {
     roles: Role[] = [];
     isLoading: boolean = false;
 
+    // Filter & Search State
+    searchTerm: string = '';
+    selectedRoleId: number | string = '';
+
     // Modal State
     showModal: boolean = false;
     isEditMode: boolean = false;
@@ -37,19 +41,32 @@ export class UserManagementComponent implements OnInit {
     currentPage: number = 1;
     itemsPerPage: number = 10;
 
+    get filteredUsers(): User[] {
+        return this.users.filter(user => {
+            const matchesSearch = user.fullName.toLowerCase().includes(this.searchTerm.toLowerCase()) || 
+                                  user.email.toLowerCase().includes(this.searchTerm.toLowerCase());
+            const matchesRole = this.selectedRoleId === '' || user.roleId === Number(this.selectedRoleId);
+            return matchesSearch && matchesRole;
+        });
+    }
+
     get totalPages(): number {
-        return Math.ceil(this.users.length / this.itemsPerPage);
+        return Math.ceil(this.filteredUsers.length / this.itemsPerPage) || 1;
     }
 
     get paginatedUsers(): User[] {
         const start = (this.currentPage - 1) * this.itemsPerPage;
-        return this.users.slice(start, start + this.itemsPerPage);
+        return this.filteredUsers.slice(start, start + this.itemsPerPage);
     }
 
     changePage(page: number) {
         if (page >= 1 && page <= this.totalPages) {
             this.currentPage = page;
         }
+    }
+
+    onFilterChange() {
+        this.currentPage = 1; // Reset to page 1 when filtering/searching
     }
 
     constructor(
