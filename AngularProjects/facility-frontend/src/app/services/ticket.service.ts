@@ -107,4 +107,34 @@ export class TicketService {
   updateTicket(id: number, data: UpdateTicketRequest): Observable<{ message: string }> {
     return this.http.put<{ message: string }>(`${this.apiUrl}/${id}`, data, { headers: this.getAuthHeaders() });
   }
+  /**
+   * 1. Xuất báo cáo Excel: Tải danh sách Ticket về máy
+   * Lưu ý: Interceptor sẽ tự động gắn Token Authorization.
+   */
+  exportTickets(): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/export-excel`, {
+      responseType: 'blob' // Bắt buộc để Angular hiểu dữ liệu trả về là file nhị phân
+    });
+  }
+
+  /**
+   * 2. Nhập dữ liệu Vật tư: Gửi file Excel lên Server
+   * Lưu ý: Không ép kiểu 'Content-Type': 'application/json' để trình duyệt tự xử lý FormData.
+   */
+  importSupplies(file: File): Observable<{ message: string }> {
+    const formData = new FormData();
+    formData.append('file', file); // Tên 'file' phải khớp với tham số trong Backend (IFormFile file)
+
+    return this.http.post<{ message: string }>(`${this.apiUrl}/import-supplies`, formData);
+  }
+
+  /**
+   * 3. Lấy dữ liệu thống kê Dashboard
+   * Dùng để vẽ biểu đồ tròn hoặc bảng xếp hạng kỹ thuật viên
+   */
+  getDashboardStats(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/dashboard-stats`);
+  }
+
+  
 }
