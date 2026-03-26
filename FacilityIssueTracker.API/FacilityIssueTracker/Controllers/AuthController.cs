@@ -1,4 +1,4 @@
-﻿using FacilityIssueTracker.Models;
+using FacilityIssueTracker.Models;
 using FacilityIssueTracker.DTOs;
 using FacilityIssueTracker.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -46,6 +46,16 @@ public class AuthController : ControllerBase
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
+
+        // US-43: Email Notification khi tài khoản mới được tạo
+        var subject = "Welcome to Facility Issue Tracker";
+        var body = $@"
+<div style=""font-family:Arial,Helvetica,sans-serif;line-height:1.4"">
+  <h2 style=""margin:0 0 12px 0"">Facility Issue Tracker</h2>
+  <p>Chào <strong>{System.Net.WebUtility.HtmlEncode(dto.FullName)}</strong>,</p>
+  <p>Tài khoản của bạn đã được tạo thành công.</p>
+</div>";
+        _ = Task.Run(() => _emailService.SendEmailAsync(dto.Email, subject, body));
 
         return Ok("Registered successfully");
     }

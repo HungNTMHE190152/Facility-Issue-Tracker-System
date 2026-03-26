@@ -41,9 +41,13 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
   showViewModal = false;
   showEditModal = false;
   showDeleteModal = false;
+  showReviewModal = false;
   currentDetail: MyTicketItem | null = null;
   editData: any = null;
   ticketToDelete: MyTicketItem | null = null;
+  reviewTicketId: number | null = null;
+  reviewRating = 5;
+  reviewComment = '';
   alertMessage = '';
   isError = false;
   editSelectedImageName = '';
@@ -213,10 +217,45 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
     this.showViewModal = false;
     this.showEditModal = false;
     this.showDeleteModal = false;
+    this.showReviewModal = false;
     this.currentDetail = null;
     this.editData = null;
     this.ticketToDelete = null;
+    this.reviewTicketId = null;
+    this.reviewRating = 5;
+    this.reviewComment = '';
     this.editSelectedImageName = '';
+  }
+
+  openReviewModal(ticket: MyTicketItem): void {
+    this.reviewTicketId = ticket.ticketId;
+    this.reviewRating = 5;
+    this.reviewComment = '';
+    this.showReviewModal = true;
+  }
+
+  submitReviewClose(): void {
+    if (!this.reviewTicketId) return;
+    if (this.reviewRating < 1 || this.reviewRating > 5) {
+      this.showAlert('Rating must be from 1 to 5', true);
+      return;
+    }
+
+    this.loading = true;
+    this.ticketService.closeTicketWithReview(this.reviewTicketId, {
+      rating: this.reviewRating,
+      comment: this.reviewComment?.trim() || null
+    }).subscribe({
+      next: () => {
+        this.showAlert('Ticket closed and review saved', false);
+        this.closeModals();
+        this.loadTickets();
+      },
+      error: (err) => {
+        this.showAlert(err?.error?.message || err?.error || 'Failed to close ticket', true);
+        this.loading = false;
+      }
+    });
   }
 
   submitEdit(): void {

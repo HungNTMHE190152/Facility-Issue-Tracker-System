@@ -3,7 +3,7 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
-import { CategoryOption, CreateTicketRequest, MyTicketFilters, MyTicketItem, UpdateTicketRequest } from '../models/ticket.models';
+  import { CategoryOption, CreateTicketRequest, MyTicketFilters, MyTicketItem, UpdateTicketRequest } from '../models/ticket.models';
 
 @Injectable({
   providedIn: 'root'
@@ -107,4 +107,63 @@ export class TicketService {
   updateTicket(id: number, data: UpdateTicketRequest): Observable<{ message: string }> {
     return this.http.put<{ message: string }>(`${this.apiUrl}/${id}`, data, { headers: this.getAuthHeaders() });
   }
+  
+ exportTickets(): Observable<{ url: string }> {
+  return this.http.post<{ url: string }>(`${this.apiUrl}/export-excel`, {}, { headers: this.getAuthHeaders() });
+}
+
+  /**
+   * 2. Nhập dữ liệu Vật tư: Gửi file Excel lên Server
+   * Lưu ý: Không ép kiểu 'Content-Type': 'application/json' để trình duyệt tự xử lý FormData.
+   */
+  importSupplies(file: File): Observable<{ message: string }> {
+    const formData = new FormData();
+    formData.append('file', file); // Tên 'file' phải khớp với tham số trong Backend (IFormFile file)
+
+    return this.http.post<{ message: string }>(`${this.apiUrl}/import-supplies`, formData, {
+      headers: new HttpHeaders({
+        Authorization: `Bearer ${localStorage.getItem('token') || ''}`
+      })
+    });
+  }
+
+  // ================= Technician Dashboard (US-34/35/36/41/42) =================
+  getTechnicianDashboard(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/technician-dashboard`, { headers: this.getAuthHeaders() });
+  }
+
+  // ================= Technician Actions =================
+  startTechnicianTicket(id: number): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(`${this.apiUrl}/${id}/start`, {}, { headers: this.getAuthHeaders() });
+  }
+
+  resolveTechnicianTicket(id: number, data: { imageAfter?: string | null }): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(`${this.apiUrl}/${id}/resolve`, data, { headers: this.getAuthHeaders() });
+  }
+
+  /**
+   * 3. Lấy dữ liệu thống kê Dashboard
+   * Dùng để vẽ biểu đồ tròn hoặc bảng xếp hạng kỹ thuật viên
+   */
+  getDashboardStats(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/dashboard-stats`, { headers: this.getAuthHeaders() });
+  }
+
+  exportResolvedTickets(): Observable<{ url: string }> {
+    return this.http.post<{ url: string }>(`${this.apiUrl}/export-resolved-excel`, {}, { headers: this.getAuthHeaders() });
+  }
+
+  exportMaterialCostReport(): Observable<{ url: string }> {
+    return this.http.post<{ url: string }>(`${this.apiUrl}/export-material-cost-excel`, {}, { headers: this.getAuthHeaders() });
+  }
+
+  exportMaintenanceLogExcel(): Observable<{ url: string }> {
+    return this.http.post<{ url: string }>(`${this.apiUrl}/export-maintenance-log-excel`, {}, { headers: this.getAuthHeaders() });
+  }
+
+  closeTicketWithReview(id: number, data: { rating: number; comment?: string | null }): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/${id}/close`, data, { headers: this.getAuthHeaders() });
+  }
+
+  
 }

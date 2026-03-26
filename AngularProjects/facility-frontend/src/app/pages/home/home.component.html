@@ -15,7 +15,6 @@
                 </div>
                 <span class="logo-text">Facility<span class="text-glow">Desk</span></span>
             </a>
-
             <div class="nav-links">
                 <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}"
                     class="nav-item">Home</a>
@@ -28,8 +27,10 @@
 
                     <ng-container *ngIf="isLoggedIn">
                         <span class="welcome-text">👋 {{ userName }}</span>
-                        <a *ngIf="userRole.toLowerCase() === 'dispatcher'" routerLink="/dispatcher-dashboard"
+                        <a *ngIf="userRole.toLowerCase() === 'dispatcher' || userRole.toLowerCase() === 'admin'" routerLink="/dispatcher-dashboard"
                             class="nav-item">Manager</a>
+                        <a *ngIf="userRole.toLowerCase() === 'technician'" routerLink="/technician-dashboard"
+                            class="nav-item">Technician Dashboard</a>
                         <a routerLink="/tickets/my" class="nav-item">My Tickets</a>
                         <a routerLink="/profile" class="nav-item">Profile</a>
                         <button (click)="logout()" class="logout-btn">Logout</button>

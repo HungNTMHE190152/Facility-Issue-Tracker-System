@@ -18,6 +18,20 @@
                      <span class="logo-text text-glow">Dispatcher Portal</span>
                 </div>
                 <div class="user-info">
+                <button class="btn btn-primary" (click)="onExportExcel()">Export all tickets</button>
+                <button class="btn btn-primary" (click)="onExportResolvedExcel()">Export resolved tickets</button>
+                <button class="btn btn-primary" (click)="onExportMaintenanceLogExcel()">Export maintenance log</button>
+                    <input
+                        #suppliesInput
+                        type="file"
+                        accept=".xlsx,.xls"
+                        style="display:none"
+                        (change)="onImportSuppliesFileSelected($event)"
+                        [disabled]="importLoading"
+                    />
+                    <button class="btn btn-primary" (click)="suppliesInput.click()" [disabled]="importLoading">
+                        {{ importLoading ? 'Importing...' : 'Import excel' }}
+                    </button>
                      <button class="logout-btn" (click)="goHome()">
                           <i class="fas fa-home"></i> Home
                      </button>
@@ -33,6 +47,38 @@
              <div class="welcome-section animate-fade-in-up">
                   <h1 class="page-title gradient-text animated-gradient">Dispatcher Dashboard</h1>
                   <p class="hero-desc">Manage the system, assign work, and track the status of support requests.</p>
+             </div>
+
+             <div class="glass-card" style="padding: 1rem; margin-bottom: 1rem;">
+                <h3 style="margin:0 0 0.75rem 0;">Dashboard statistics</h3>
+                <div *ngIf="dashboardLoading">Loading dashboard...</div>
+                <div *ngIf="!dashboardLoading && dashboardError" style="padding:0.75rem; color:#b91c1c; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 12px;">
+                    {{ dashboardError }}
+                </div>
+                <div *ngIf="!dashboardLoading && !dashboardError" style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <app-pie-chart [data]="pieChartData"></app-pie-chart>
+                    <app-line-chart [data]="lineChartData"></app-line-chart>
+                </div>
+                <div *ngIf="!dashboardLoading && !dashboardError" style="margin-top: 1rem;">
+                    <h4 style="margin:0 0 0.5rem 0;">Technician Leaderboard</h4>
+                    <div *ngIf="leaderboard.length === 0">No leaderboard data.</div>
+                    <table *ngIf="leaderboard.length > 0" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left; padding:0.5rem;">Technician</th>
+                                <th style="text-align:left; padding:0.5rem;">Resolved/CLOSED tickets</th>
+                                <th style="text-align:left; padding:0.5rem;">Avg. rating</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let item of leaderboard">
+                                <td style="padding:0.5rem;">{{ item.fullName }}</td>
+                                <td style="padding:0.5rem;">{{ item.resolvedCount }}</td>
+                                <td style="padding:0.5rem;">{{ item.averageRating | number:'1.1-2' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
              </div>
 
              <!-- Action Cards -->
