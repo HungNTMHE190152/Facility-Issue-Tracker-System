@@ -248,21 +248,19 @@ export class EditTicketComponent implements OnInit {
 	}
 
 	downloadExcel(): void {
-    this.ticketService.exportTickets().subscribe({
-      next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        // Đặt tên file tải về
-        a.download = `BaoCao_Ticket_${this.ticketId}_${new Date().getTime()}.xlsx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-      },
-      error: (err) => {
-        console.error('Lỗi xuất file:', err);
-        alert('Không thể xuất file Excel!');
-      }
-    });
+		this.ticketService.exportTickets().subscribe({
+			next: (res: any) => {
+				if (res && res.url) {
+					window.open(res.url, '_blank');
+				} else {
+					alert('Không tìm thấy đường dẫn tải file!');
+				}
+			},
+			error: (err) => {
+				console.error('Lỗi xuất file:', err);
+				alert('Không thể xuất file Excel!');
+			}
+		});
   }
 
   // --- HÀM NHẬP EXCEL ---
