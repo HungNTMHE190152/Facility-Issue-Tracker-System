@@ -31,10 +31,25 @@ export class DispatcherDashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Prevent calling protected endpoints when token is missing/expired.
+    const token = localStorage.getItem('token');
+    if (!token) {
+      this.dashboardLoading = false;
+      this.dashboardError = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+      this.logout();
+      return;
+    }
+
     this.loadDashboardStats();
   }
 
   onExportExcel(): void {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      this.dashboardError = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+      this.logout();
+      return;
+    }
     this.ticketService.exportTickets().subscribe({
       next: (res: any) => {
         if (res?.url) window.open(res.url, '_blank');
@@ -42,12 +57,21 @@ export class DispatcherDashboardComponent implements OnInit {
       },
       error: (err) => {
         console.error(err);
+        if (err?.status === 401) {
+          this.logout();
+          return;
+        }
         alert('Tải file thất bại!');
       }
     });
   }
 
   onExportResolvedExcel(): void {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      this.logout();
+      return;
+    }
     this.ticketService.exportResolvedTickets().subscribe({
       next: (res: any) => {
         if (res?.url) window.open(res.url, '_blank');
@@ -55,12 +79,21 @@ export class DispatcherDashboardComponent implements OnInit {
       },
       error: (err) => {
         console.error(err);
+        if (err?.status === 401) {
+          this.logout();
+          return;
+        }
         alert('Xuất báo cáo ticket đã giải quyết thất bại!');
       }
     });
   }
 
   onExportMaterialCostExcel(): void {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      this.logout();
+      return;
+    }
     this.ticketService.exportMaterialCostReport().subscribe({
       next: (res: any) => {
         if (res?.url) window.open(res.url, '_blank');
@@ -68,12 +101,21 @@ export class DispatcherDashboardComponent implements OnInit {
       },
       error: (err) => {
         console.error(err);
+        if (err?.status === 401) {
+          this.logout();
+          return;
+        }
         alert('Xuất báo cáo chi phí vật liệu thất bại!');
       }
     });
   }
 
   onExportMaintenanceLogExcel(): void {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      this.logout();
+      return;
+    }
     this.ticketService.exportMaintenanceLogExcel().subscribe({
       next: (res: any) => {
         if (res?.url) window.open(res.url, '_blank');
@@ -81,6 +123,10 @@ export class DispatcherDashboardComponent implements OnInit {
       },
       error: (err) => {
         console.error(err);
+        if (err?.status === 401) {
+          this.logout();
+          return;
+        }
         alert('Xuất nhật ký bảo trì thất bại!');
       }
     });
@@ -90,6 +136,12 @@ export class DispatcherDashboardComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      this.logout();
+      return;
+    }
 
     this.importLoading = true;
     this.ticketService.importSupplies(file).subscribe({
@@ -139,6 +191,12 @@ export class DispatcherDashboardComponent implements OnInit {
       },
       error: (err) => {
         console.error(err);
+        if (err?.status === 401) {
+          this.dashboardLoading = false;
+          this.dashboardError = 'Unauthorized. Vui lòng đăng nhập lại.';
+          this.logout();
+          return;
+        }
         this.dashboardError = err?.error?.message || err?.error || 'Không thể tải dashboard thống kê';
         this.dashboardLoading = false;
         alert(err?.error?.message || 'Không thể tải dashboard thống kê');

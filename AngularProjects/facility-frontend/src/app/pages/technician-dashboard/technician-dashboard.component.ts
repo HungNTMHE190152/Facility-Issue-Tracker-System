@@ -79,7 +79,7 @@ export class TechnicianDashboardComponent implements OnInit, OnDestroy {
     }, this.pollIntervalMs);
   }
 
-  private loadDashboard(isInitialLoad: boolean): void {
+  private loadDashboard(isInitialLoad: boolean = false): void {
     if (isInitialLoad) {
       this.loading = true;
       this.hasLoaded = false;
