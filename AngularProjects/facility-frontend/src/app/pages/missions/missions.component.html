@@ -1,0 +1,130 @@
+<div class="missions-container">
+    <div class="header-section" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a routerLink="/" class="back-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Home
+            </a>
+            <h1>My Missions</h1>
+        </div>
+        <app-notification-bell></app-notification-bell>
+    </div>
+
+    <!-- Alert Messages -->
+    <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
+    <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+
+    <div *ngIf="missions.length === 0" class="empty-state">
+        <div class="empty-icon">✓</div>
+        <h2>Hiện không có nhiệm vụ mới</h2>
+        <p>Bạn đã xử lý hết các nhiệm vụ được giao.</p>
+    </div>
+
+    <div class="mission-grid" *ngIf="missions.length > 0">
+        <div class="mission-card" *ngFor="let m of missions">
+            <div class="card-header">
+                <span class="ticket-id">#{{ m.ticketId }}</span>
+                <span class="priority-badge" [ngClass]="'priority-' + m.priority">
+                    Priority {{ m.priority }}
+                </span>
+            </div>
+            
+            <div class="card-body">
+                <h3>{{ m.title }}</h3>
+                <div class="info-row">
+                    <span class="label">Location:</span>
+                    <span class="value">{{ m.location }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Category:</span>
+                    <span class="value">{{ m.categoryName }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Trạng thái:</span>
+                    <span class="value" style="font-weight: bold; color: var(--primary-color);">{{ m.status }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Assigned:</span>
+                    <span class="value">{{ m.assignedAt | date:'short' }}</span>
+                </div>
+            </div>
+
+            <div class="card-actions">
+                <ng-container *ngIf="m.status === 'ASSIGNED'">
+                    <button class="btn-approve" (click)="approve(m.ticketId)" [disabled]="submitting">
+                        <span class="icon">{{ submitting ? '⏳' : '✓' }}</span> 
+                        {{ submitting ? '...' : 'Nhận việc' }}
+                    </button>
+                    <button class="btn-reject" (click)="reject(m.ticketId)" [disabled]="submitting">
+                        <span class="icon">✕</span> Từ chối
+                    </button>
+                </ng-container>
+
+                <ng-container *ngIf="m.status === 'ACCEPTED'">
+                    <button class="btn-approve" style="width: 100%;" (click)="startTicket(m.ticketId)" [disabled]="submitting">
+                        <span class="icon">{{ submitting ? '⏳' : '🚀' }}</span> 
+                        {{ submitting ? '...' : 'Bắt đầu làm' }}
+                    </button>
+                </ng-container>
+
+                <ng-container *ngIf="m.status === 'PAUSED'">
+                    <button class="btn-approve" style="width: 100%; background-color: #3b82f6;" (click)="resumeTicket(m.ticketId)" [disabled]="submitting">
+                        <span class="icon">{{ submitting ? '⏳' : '▶' }}</span> 
+                        {{ submitting ? '...' : 'Tiếp tục công việc' }}
+                    </button>
+                </ng-container>
+
+                <ng-container *ngIf="m.status === 'IN_PROGRESS'">
+                    <button class="btn-reject" style="background-color: #f59e0b; color: #fff; border: none;" (click)="pauseTicket(m.ticketId)" [disabled]="submitting">
+                        <span class="icon">{{ submitting ? '⏳' : '⏸' }}</span> 
+                        {{ submitting ? '...' : 'Tạm dừng' }}
+                    </button>
+                    <button class="btn-approve" style="background-color: #10b981;" (click)="openResolveModal(m)" [disabled]="submitting">
+                        <span class="icon">🏁</span> Hoàn thành
+                    </button>
+                </ng-container>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Giải Quyết Ticket -->
+<div class="modal-overlay" *ngIf="showResolveModal" (click)="closeResolveModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+        <h3 class="modal-title">Báo cáo hoàn thành</h3>
+        <p class="modal-subtitle">Cung cấp hình ảnh khắc phục cho nhiệm vụ <strong>#{{ currentDetail?.ticketId }}</strong>.</p>
+        
+        <div class="upload-section">
+            <div *ngIf="resolveData.imageAfter" class="image-preview">
+                <img [src]="resolveData.imageAfter" class="preview-img">
+                <button (click)="removeResolveImage()" class="remove-img-btn" [disabled]="loading || compressing">✕</button>
+            </div>
+            
+            <div *ngIf="!resolveData.imageAfter && !compressing" (click)="fileInput.click()" class="drop-zone">
+                <div class="upload-icon">📸</div>
+                <div class="upload-text">Tải ảnh minh chứng</div>
+                <div class="upload-hint">Hỗ trợ JPG, PNG (Tự động nén để gửi nhanh)</div>
+            </div>
+
+            <!-- Chỉ báo đang nén -->
+            <div *ngIf="compressing" class="compressing-state">
+                <div class="spinner-small"></div>
+                <span>Đang nén ảnh để gửi nhanh hơn...</span>
+            </div>
+
+            <input type="file" #fileInput accept="image/jpeg, image/png" style="display:none" (change)="onResolveFileSelected($event)">
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="closeResolveModal()" [disabled]="submitting || compressing">Hủy</button>
+            <button type="button" class="btn-primary" (click)="submitResolve()" 
+                    [disabled]="!resolveData.imageAfter || submitting || compressing">
+                <span *ngIf="submitting"><i class="fas fa-spinner fa-spin"></i> Đang gửi...</span>
+                <span *ngIf="!submitting">Gửi báo cáo</span>
+            </button>
+        </div>
+    </div>
+</div>
