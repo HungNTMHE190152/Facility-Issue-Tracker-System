@@ -15,10 +15,13 @@ export class TicketService {
 
   private getAuthHeaders(): HttpHeaders {
     const token = localStorage.getItem('token');
-    return new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    });
+    const headersObj: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    if (token) {
+      headersObj['Authorization'] = `Bearer ${token}`;
+    }
+    return new HttpHeaders(headersObj);
   }
 
   getCategories(): Observable<CategoryOption[]> {
@@ -120,11 +123,16 @@ export class TicketService {
     const formData = new FormData();
     formData.append('file', file); // Tên 'file' phải khớp với tham số trong Backend (IFormFile file)
 
-    return this.http.post<{ message: string }>(`${this.apiUrl}/import-supplies`, formData, {
-      headers: new HttpHeaders({
-        Authorization: `Bearer ${localStorage.getItem('token') || ''}`
-      })
-    });
+    const token = localStorage.getItem('token');
+    const headers = token
+      ? new HttpHeaders({ Authorization: `Bearer ${token}` })
+      : undefined;
+
+    return this.http.post<{ message: string }>(
+      `${this.apiUrl}/import-supplies`,
+      formData,
+      headers ? { headers } : undefined
+    );
   }
 
   // ================= Technician Dashboard (US-34/35/36/41/42) =================
