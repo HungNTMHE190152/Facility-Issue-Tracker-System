@@ -1,27 +1,15 @@
 <div class="missions-container">
     <div class="header-section" style="display: flex; justify-content: space-between; align-items: center;">
         <div style="display: flex; align-items: center; gap: 20px;">
-            <a routerLink="/" class="back-link">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to Home
-            </a>
-            <h1>My Missions</h1>
-        </div>
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <a routerLink="/" class="logo" style="text-decoration: none;">
-                <div class="logo-box">
-                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                       <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                     </svg>
-                </div>
-                <span class="logo-text text-glow">Portal</span>
-            </a>
-            <app-notification-bell></app-notification-bell>
-        </div>
+            <a routerLink="/" class="logo">
+             <div class="logo-box">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                  </svg>
+             </div>
+             <span class="logo-text text-glow">Technician Portal</span>
+        </a>
     </div>
-
 
     <!-- Alert Messages -->
     <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
@@ -46,7 +34,6 @@
                         </svg>
                     </button>
                 </div>
-
                 <span class="priority-badge" [ngClass]="'priority-' + m.priority">
                     Priority {{ m.priority }}
                 </span>
@@ -183,6 +170,4 @@
             </button>
         </div>
     </div>
-    </div>
 </div>
-
