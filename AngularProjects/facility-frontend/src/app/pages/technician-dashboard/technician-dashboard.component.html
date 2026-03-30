@@ -1,14 +1,14 @@
 <div class="tech-dashboard">
   <header class="glass-nav">
     <div class="nav-content">
-      <div class="logo">
+      <a routerLink="/" class="logo">
         <div class="logo-box">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
           </svg>
         </div>
-        <span class="logo-text">Technician Dashboard</span>
-      </div>
+        <span class="logo-text text-glow">Technician Portal</span>
+      </a>
 
       <div class="nav-actions">
         <button class="btn-ghost notif-bell" (click)="toggleNotificationsPanel()" type="button" aria-label="Notifications">
@@ -77,6 +77,23 @@
           </div>
         </div>
 
+        <!-- Rating Summary (US-32) -->
+        <div class="rating-summary" *ngIf="hasLoaded">
+          <div class="rating-box">
+             <div class="rating-label">Average Rating</div>
+             <div class="rating-stars">
+                <span class="star-value">{{ averageRating | number:'1.1-1' }}</span>
+                <div class="stars-row">
+                   <span class="star" [class.filled]="averageRating >= 1">★</span>
+                   <span class="star" [class.filled]="averageRating >= 2">★</span>
+                   <span class="star" [class.filled]="averageRating >= 3">★</span>
+                   <span class="star" [class.filled]="averageRating >= 4">★</span>
+                   <span class="star" [class.filled]="averageRating >= 5">★</span>
+                </div>
+             </div>
+          </div>
+        </div>
+
         <div class="loading" *ngIf="loading">Loading...</div>
         <div class="empty" *ngIf="!loading && hasLoaded && recentTickets.length === 0">
           No assigned tickets yet.
@@ -112,6 +129,12 @@
                 <div class="step" [class.done]="stepIndex(t.status) >= 0">OPEN</div>
                 <div class="step" [class.done]="stepIndex(t.status) >= 1">ASSIGNED</div>
                 <div class="step" [class.done]="stepIndex(t.status) >= 2">IN_PROGRESS</div>
+
+                <!-- NEW: Integrated Pause/Resume actions -->
+                <button *ngIf="t.status === 'IN_PROGRESS'" class="step-btn pause" (click)="pauseTicket(t.ticketId)">PAUSE</button>
+                <button *ngIf="t.status === 'PAUSED'" class="step-btn resume" (click)="resumeTicket(t.ticketId)">RESUME</button>
+                <div *ngIf="t.status === 'PAUSED'" class="step done st-paused">PAUSED</div>
+
                 <div class="step" [class.done]="stepIndex(t.status) >= 3">RESOLVED</div>
                 <div class="step" [class.done]="stepIndex(t.status) >= 4">CLOSED</div>
               </div>

@@ -26,6 +26,7 @@ export class TechnicianDashboardComponent implements OnInit, OnDestroy {
 
   pieChartData: TechnicianPieDatum[] = [];
   lineChartData: TechnicianLineDatum[] = [];
+  averageRating = 0;
 
   statusCounts: Array<{ status: string; count: number }> = [];
   recentTickets: Array<any> = [];
@@ -111,15 +112,18 @@ export class TechnicianDashboardComponent implements OnInit, OnDestroy {
 
           this.pieChartData = res?.pieChartData ?? [];
           this.lineChartData = res?.lineChartData ?? [];
+          this.averageRating = res?.averageRating ?? 0;
           this.statusCounts = res?.taskProgress?.statusCounts ?? [];
           this.recentTickets = res?.taskProgress?.recentTickets ?? [];
           this.notifications = newNotifications;
 
           this.lastNotificationMaxChangedAtMs = Math.max(this.lastNotificationMaxChangedAtMs, newMaxChangedAtMs);
           this.updateUnreadCount();
+          this.cdr.detectChanges(); // Robustness: detect inside next
         },
         error: (err) => {
           this.notificationService.error(err?.error?.message || err?.error || 'Cannot load dashboard');
+          this.cdr.detectChanges();
         },
       });
 
@@ -200,6 +204,7 @@ export class TechnicianDashboardComponent implements OnInit, OnDestroy {
     const s = (status ?? '').toUpperCase();
     if (s === 'ASSIGNED') return 'st-assigned';
     if (s === 'IN_PROGRESS') return 'st-progress';
+    if (s === 'PAUSED') return 'st-paused';
     if (s === 'RESOLVED') return 'st-resolved';
     if (s === 'CLOSED') return 'st-closed';
     return 'st-open';
@@ -208,6 +213,7 @@ export class TechnicianDashboardComponent implements OnInit, OnDestroy {
   stepIndex(status: string): number {
     const s = (status ?? '').toUpperCase();
     const order = ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
+    if (s === 'PAUSED') return 2; // Keep at IN_PROGRESS highlight level
     return Math.max(0, order.indexOf(s));
   }
 
@@ -275,7 +281,7 @@ export class TechnicianDashboardComponent implements OnInit, OnDestroy {
         next: () => {
           this.notificationService.success('Ticket resolved successfully');
           this.closeResolveModal();
-          this.loadDashboard();
+          this.loadDashboard(false);
         },
         error: (err) => {
           this.notificationService.error(err?.error?.message || err?.error || 'Resolve failed');
@@ -287,13 +293,56 @@ export class TechnicianDashboardComponent implements OnInit, OnDestroy {
 
   startTicket(ticketId: number): void {
     if (this.loading) return;
+    this.loading = true;
+    this.cdr.detectChanges();
+
     const sub = this.ticketService.startTechnicianTicket(ticketId).subscribe({
       next: () => {
         this.notificationService.success('Ticket started');
-        this.loadDashboard();
+        this.loadDashboard(true);
       },
       error: (err) => {
+        this.loading = false;
         this.notificationService.error(err?.error?.message || err?.error || 'Start failed');
+        this.cdr.detectChanges();
+      },
+    });
+    this.subs.add(sub);
+  }
+
+  pauseTicket(ticketId: number): void {
+    if (this.loading) return;
+    this.loading = true; // Provide immediate feedback
+    this.cdr.detectChanges();
+
+    const sub = this.ticketService.pauseTicket(ticketId).subscribe({
+      next: () => {
+        this.notificationService.info('Mission paused');
+        this.loadDashboard(true); // Force full refresh
+      },
+      error: (err) => {
+        this.loading = false;
+        this.notificationService.error(err?.error?.message || err?.error || 'Pause failed');
+        this.cdr.detectChanges();
+      },
+    });
+    this.subs.add(sub);
+  }
+
+  resumeTicket(ticketId: number): void {
+    if (this.loading) return;
+    this.loading = true;
+    this.cdr.detectChanges();
+
+    const sub = this.ticketService.resumeTicket(ticketId).subscribe({
+      next: () => {
+        this.notificationService.success('Mission resumed');
+        this.loadDashboard(true); // Force full refresh
+      },
+      error: (err) => {
+        this.loading = false;
+        this.notificationService.error(err?.error?.message || err?.error || 'Resume failed');
+        this.cdr.detectChanges();
       },
     });
     this.subs.add(sub);

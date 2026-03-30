@@ -47,6 +47,7 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
   ticketToDelete: MyTicketItem | null = null;
   reviewTicketId: number | null = null;
   reviewRating = 5;
+  hoverRating = 0;
   reviewComment = '';
   alertMessage = '';
   isError = false;
@@ -232,6 +233,14 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
     this.reviewRating = 5;
     this.reviewComment = '';
     this.showReviewModal = true;
+  }
+
+  setRating(val: number): void {
+    this.reviewRating = val;
+  }
+
+  setHover(val: number): void {
+    this.hoverRating = val;
   }
 
   submitReviewClose(): void {

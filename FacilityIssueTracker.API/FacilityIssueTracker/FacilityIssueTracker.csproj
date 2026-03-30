@@ -10,7 +10,6 @@
     <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
 	  <PackageReference Include="ClosedXML" Version="0.104.2" />
 	  <PackageReference Include="ExcelDataReader" Version="3.7.0" />
-	  <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.6">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

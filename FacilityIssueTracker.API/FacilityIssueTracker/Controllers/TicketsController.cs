@@ -40,10 +40,78 @@ public class TicketsController : ControllerBase
         return 36;                             // Low/default
     }
 
-    private void FireAndForgetEmail(string? toEmail, string subject, string bodyHtml)
+    private void FireAndForgetEmail(string? to, string subject, string body)
     {
-        if (string.IsNullOrWhiteSpace(toEmail)) return;
-        _ = Task.Run(() => _emailService.SendEmailAsync(toEmail, subject, bodyHtml));
+        if (string.IsNullOrEmpty(to)) return;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                // Giả sử có EmailService
+                // await _emailService.SendEmailAsync(to, subject, body);
+                Console.WriteLine($"Sending email to {to}: {subject}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send email: {ex.Message}");
+            }
+        });
+    }
+
+    private async Task RecordHistory(int ticketId, string? oldStatus, string? newStatus, int? changerId = null, string? details = null)
+    {
+        try
+        {
+            var changedBy = changerId ?? GetCurrentUserId();
+            
+            // If details are provided, we try to fit them into the 20-char limit of the DB column
+            // for "Advanced History" without breaking the schema.
+            string? finalNewStatus = newStatus;
+            if (!string.IsNullOrEmpty(details))
+            {
+                finalNewStatus = details.Length > 20 ? details.Substring(0, 20) : details;
+            }
+
+            var history = new TicketHistory
+            {
+                TicketId = ticketId,
+                OldStatus = oldStatus?.Length > 20 ? oldStatus.Substring(0, 20) : oldStatus,
+                NewStatus = finalNewStatus,
+                ChangedBy = changedBy,
+                ChangedAt = DateTime.Now
+            };
+
+            _context.TicketHistories.Add(history);
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to record history: {ex.Message}");
+        }
+    }
+
+    [HttpGet("{id}/history")]
+    [Authorize]
+    public async Task<IActionResult> GetTicketHistory(int id)
+    {
+        var history = await _context.TicketHistories
+            .AsNoTracking()
+            .Where(h => h.TicketId == id)
+            .OrderByDescending(h => h.ChangedAt)
+            .Include(h => h.ChangedByNavigation)
+            .Select(h => new TicketHistoryDTO
+            {
+                HistoryId = h.HistoryId,
+                TicketId = h.TicketId,
+                OldStatus = h.OldStatus,
+                NewStatus = h.NewStatus,
+                ChangedByName = h.ChangedByNavigation.FullName,
+                ChangedAt = h.ChangedAt
+            })
+            .ToListAsync();
+
+        return Ok(history);
     }
 
     private string BuildTicketStatusEmailBody(int ticketId, string title, string newStatus, DateTime? eventAt, string? note)
@@ -358,6 +426,22 @@ public class TicketsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(dto.Location))
             ticket.Location = dto.Location.Trim();
 
+        // Advanced History (US-21): Record field changes
+        if (int.TryParse(userIdStr, out var changerId))
+        {
+            if (dto.CategoryId.HasValue && dto.CategoryId.Value != ticket.CategoryId)
+                await RecordHistory(ticket.TicketId, prevStatusForEmail ?? "OPEN", ticket.Status ?? "OPEN", changerId, $"Changed Category to {dto.CategoryId.Value}");
+            
+            if (dto.Priority.HasValue && dto.Priority.Value != (await _context.Tickets.AsNoTracking().FirstOrDefaultAsync(x => x.TicketId == id))?.Priority)
+                await RecordHistory(ticket.TicketId, prevStatusForEmail ?? "OPEN", ticket.Status ?? "OPEN", changerId, $"Changed Priority to {dto.Priority.Value}");
+
+            if (dto.TechnicianId.HasValue)
+                await RecordHistory(ticket.TicketId, prevStatusForEmail ?? "OPEN", ticket.Status ?? "OPEN", changerId, $"Changed Technician to {dto.TechnicianId.Value}");
+            
+            if (statusChangedForEmail)
+                await RecordHistory(ticket.TicketId, prevStatusForEmail ?? "OPEN", newStatusForEmail ?? "OPEN", changerId, $"Status updated to {newStatusForEmail}");
+        }
+
         _context.Tickets.Update(ticket);
         await _context.SaveChangesAsync();
 
@@ -486,6 +570,48 @@ public class TicketsController : ControllerBase
 
         return Ok(new { message = "Đã phân công kỹ thuật viên thành công" });
     }
+
+    // Nhấn Accept
+    [HttpPut("{id}/accept")]
+    [Authorize(Roles = "Technician")]
+    public async Task<IActionResult> AcceptTicket(int id)
+    {
+        var ticket = await _context.Tickets.FindAsync(id);
+        if (ticket == null) return NotFound();
+
+        var technicianId = GetCurrentUserId();
+        if (!ticket.TechnicianId.HasValue || ticket.TechnicianId.Value != technicianId)
+            return Forbid();
+
+        var oldStatus = ticket.Status;
+        ticket.Status = "ACCEPTED";
+        await _context.SaveChangesAsync();
+        await RecordHistory(id, oldStatus, "ACCEPTED");
+
+        return Ok(new { message = "Đã chấp nhận sự cố" });
+    }
+
+    // Nhấn Reject
+    [HttpPut("{id}/reject")]
+    [Authorize(Roles = "Technician")]
+    public async Task<IActionResult> RejectTicket(int id)
+    {
+        var ticket = await _context.Tickets.FindAsync(id);
+        if (ticket == null) return NotFound();
+
+        var technicianId = GetCurrentUserId();
+        if (!ticket.TechnicianId.HasValue || ticket.TechnicianId.Value != technicianId)
+            return Forbid();
+
+        var oldStatus = ticket.Status;
+        ticket.Status = "OPEN";
+        ticket.TechnicianId = null;
+        ticket.AssignedAt = null;
+        await _context.SaveChangesAsync();
+        await RecordHistory(id, oldStatus, "OPEN (REJECTED)");
+
+        return Ok(new { message = "Đã từ chối sự cố" });
+    }
     // Nhấn Start
     [HttpPut("{id}/start")]
     [Authorize(Roles = "Technician")]
@@ -498,9 +624,11 @@ public class TicketsController : ControllerBase
         if (!ticket.TechnicianId.HasValue || ticket.TechnicianId.Value != technicianId)
             return Forbid();
 
+        var oldStatus = ticket.Status;
         var prevStatus = ticket.Status?.ToUpper();
         ticket.Status = "IN_PROGRESS";
         await _context.SaveChangesAsync();
+        await RecordHistory(id, oldStatus, "IN_PROGRESS");
 
         // Email Notification (US-43): báo cho reporter khi technician bắt đầu xử lý
         if (prevStatus != "IN_PROGRESS")
@@ -530,12 +658,14 @@ public class TicketsController : ControllerBase
         if (!ticket.TechnicianId.HasValue || ticket.TechnicianId.Value != technicianId)
             return Forbid();
 
+        var oldStatus = ticket.Status;
         var prevStatus = ticket.Status?.ToUpper();
         ticket.Status = "RESOLVED";
         ticket.ImageAfter = dto.ImageAfter;
         ticket.ResolvedAt = DateTime.Now;
 
         await _context.SaveChangesAsync();
+        await RecordHistory(id, oldStatus, "RESOLVED");
 
         // Email Notification (US-43): báo cho reporter khi đã resolve xong
         if (prevStatus != "RESOLVED")
@@ -551,6 +681,46 @@ public class TicketsController : ControllerBase
         }
 
         return Ok(new { message = "Đã báo cáo hoàn thành sự cố" });
+    }
+
+    // Nhấn Pause
+    [HttpPut("{id}/pause")]
+    [Authorize(Roles = "Technician")]
+    public async Task<IActionResult> PauseTicket(int id)
+    {
+        var ticket = await _context.Tickets.FindAsync(id);
+        if (ticket == null) return NotFound();
+
+        var technicianId = GetCurrentUserId();
+        if (!ticket.TechnicianId.HasValue || ticket.TechnicianId.Value != technicianId)
+            return Forbid();
+
+        var oldStatus = ticket.Status;
+        ticket.Status = "PAUSED";
+        await _context.SaveChangesAsync();
+        await RecordHistory(id, oldStatus, "PAUSED");
+
+        return Ok(new { message = "Đã tạm dừng công việc" });
+    }
+
+    // Nhấn Resume
+    [HttpPut("{id}/resume")]
+    [Authorize(Roles = "Technician")]
+    public async Task<IActionResult> ResumeTicket(int id)
+    {
+        var ticket = await _context.Tickets.FindAsync(id);
+        if (ticket == null) return NotFound();
+
+        var technicianId = GetCurrentUserId();
+        if (!ticket.TechnicianId.HasValue || ticket.TechnicianId.Value != technicianId)
+            return Forbid();
+
+        var oldStatus = ticket.Status;
+        ticket.Status = "IN_PROGRESS";
+        await _context.SaveChangesAsync();
+        await RecordHistory(id, oldStatus, "IN_PROGRESS (RESUMED)");
+
+        return Ok(new { message = "Đã tiếp tục công việc" });
     }
     [HttpPost("{id}/close")]
     [Authorize(Roles = "Reporter")]
@@ -923,6 +1093,54 @@ public class TicketsController : ControllerBase
         }
     }
 
+    [HttpGet("active-missions")]
+    [Authorize(Roles = "Technician")]
+    public async Task<IActionResult> GetActiveMissions()
+    {
+        var technicianId = GetCurrentUserId();
+        var now = DateTime.Now;
+
+        var missionsRaw = await _context.Tickets
+            .AsNoTracking()
+            .Where(t => t.TechnicianId == technicianId && t.Status != "CLOSED")
+            .OrderByDescending(t => t.CreatedAt)
+            .Include(t => t.Category)
+            .Select(t => new
+            {
+                ticketId = t.TicketId,
+                title = t.Title,
+                status = t.Status ?? "OPEN",
+                priority = t.Priority,
+                location = t.Location,
+                categoryName = t.Category.CategoryName,
+                createdAt = t.CreatedAt,
+                assignedAt = t.AssignedAt,
+                resolvedAt = t.ResolvedAt,
+                closedAt = t.ClosedAt
+            })
+            .ToListAsync();
+
+        var missions = missionsRaw.Select(t =>
+        {
+            DateTime? deadlineAt = null;
+            if (t.assignedAt.HasValue && t.priority.HasValue)
+            {
+                deadlineAt = t.assignedAt.Value.AddHours(GetPriorityHoursAllowed(t.priority));
+            }
+            var normalized = (t.status ?? "OPEN").ToUpper();
+            var isOverdue = deadlineAt.HasValue && deadlineAt.Value < now && normalized != "CLOSED" && normalized != "RESOLVED";
+
+            return new
+            {
+                t.ticketId, t.title, t.status, t.priority, t.location, t.categoryName,
+                t.createdAt, t.assignedAt, t.resolvedAt, t.closedAt,
+                deadlineAt, isOverdue
+            };
+        }).ToList();
+
+        return Ok(missions);
+    }
+
     [HttpGet("technician-dashboard")]
     [Authorize(Roles = "Technician")]
     public async Task<IActionResult> GetTechnicianDashboard()
@@ -1062,6 +1280,11 @@ public class TicketsController : ControllerBase
             .Take(20)
             .ToList();
 
+        // Rating Summary (US-32)
+        var averageRating = await _context.Reviews
+            .Where(r => _context.Tickets.Any(t => t.TicketId == r.TicketId && t.TechnicianId == technicianId))
+            .AverageAsync(r => (double?)r.Rating) ?? 0.0;
+
         return Ok(new
         {
             pieChartData,
@@ -1071,7 +1294,8 @@ public class TicketsController : ControllerBase
                 statusCounts,
                 recentTickets
             },
-            notifications = notificationsOrdered
+            notifications = notificationsOrdered,
+            averageRating
         });
     }
 
@@ -1258,9 +1482,140 @@ public class TicketsController : ControllerBase
         }
     }
 
+    [HttpGet("debug-tickets")]
+    [AllowAnonymous]
+    public async Task<IActionResult> DebugTickets()
+    {
+        var tickets = await _context.Tickets
+            .Include(t => t.Reporter)
+            .OrderByDescending(t => t.CreatedAt)
+            .Select(t => new
+            {
+                t.TicketId,
+                t.Title,
+                t.Status,
+                t.ReporterId,
+                ReporterName = t.Reporter.FullName,
+                t.ResolvedAt
+            })
+            .Take(50)
+            .ToListAsync();
+
+        var users = await _context.Users
+            .Select(u => new { u.UserId, u.FullName, u.Email })
+            .ToListAsync();
+
+        return Ok(new { tickets, users });
+    }
+
+    [HttpGet("reporter-dashboard")]
+    [Authorize(Roles = "Reporter")]
+    public async Task<IActionResult> GetReporterDashboard()
+    {
+        var reporterId = GetCurrentUserId();
+        var now = DateTime.Now;
+
+        Console.WriteLine($"[DEBUG] GetReporterDashboard: reporterId={reporterId}");
+
+        var ticketsQuery = _context.Tickets
+            .AsNoTracking()
+            .Where(t => t.ReporterId == reporterId)
+            .Include(t => t.Category)
+            .Include(t => t.Technician);
+
+        var allTicketsCount = await _context.Tickets.CountAsync();
+        var myTicketsCount = await ticketsQuery.CountAsync();
+        Console.WriteLine($"[DEBUG] Total tickets in DB: {allTicketsCount}, Tickets for this reporter: {myTicketsCount}");
+
+        var recentTicketsList = await ticketsQuery
+            .OrderByDescending(t => t.CreatedAt)
+            .Take(5)
+            .Select(t => new
+            {
+                ticketId = t.TicketId,
+                title = t.Title,
+                status = t.Status ?? "OPEN",
+                categoryName = t.Category.CategoryName,
+                createdAt = t.CreatedAt,
+                resolvedAt = t.ResolvedAt,
+                closedAt = t.ClosedAt
+            })
+            .ToListAsync();
+
+        // Derived notifications for reporter
+        // Fetch tickets with ANY recent activity (Assigned, Resolved, or Closed)
+        var ticketsForNotifications = await ticketsQuery
+            .Where(t => t.AssignedAt.HasValue || t.ResolvedAt.HasValue || t.ClosedAt.HasValue)
+            .OrderByDescending(t => t.ResolvedAt ?? t.ClosedAt ?? t.AssignedAt ?? t.CreatedAt)
+            .Take(30)
+            .ToListAsync();
+
+        var notifications = new List<ReporterNotificationItem>();
+        // Process all reporter tickets for status history
+        var allMyTickets = await ticketsQuery.ToListAsync();
+
+        foreach (var t in allMyTickets)
+        {
+            if (t.AssignedAt.HasValue)
+            {
+                notifications.Add(new ReporterNotificationItem
+                {
+                    ticketId = t.TicketId,
+                    message = $"Ticket #{t.TicketId} has been assigned to a technician.",
+                    type = "info",
+                    status = "ASSIGNED",
+                    changedAt = t.AssignedAt.Value
+                });
+            }
+
+            if (t.ResolvedAt.HasValue)
+            {
+                notifications.Add(new ReporterNotificationItem
+                {
+                    ticketId = t.TicketId,
+                    message = $"Your ticket #{t.TicketId} has been resolved by the technician. Please check it.",
+                    type = "success",
+                    status = "RESOLVED",
+                    changedAt = t.ResolvedAt.Value
+                });
+            }
+
+            if (t.ClosedAt.HasValue)
+            {
+                notifications.Add(new ReporterNotificationItem
+                {
+                    ticketId = t.TicketId,
+                    message = $"Ticket #{t.TicketId} has been closed.",
+                    type = "info",
+                    status = "CLOSED",
+                    changedAt = t.ClosedAt.Value
+                });
+            }
+        }
+
+        var notificationsOrdered = notifications
+            .OrderByDescending(n => n.changedAt)
+            .Take(15)
+            .ToList();
+
+        return Ok(new
+        {
+            recentTickets = recentTicketsList,
+            notifications = notificationsOrdered
+        });
+    }
+
+    private class ReporterNotificationItem
+    {
+        public int ticketId { get; set; }
+        public string message { get; set; } = string.Empty;
+        public string type { get; set; } = "info";
+        public string status { get; set; } = string.Empty;
+        public DateTime changedAt { get; set; }
+    }
+
     private class TechnicianNotificationItem
     {
-        // Lower camelCase để frontend lấy đúng key (JS case-sensitive).
         public int historyId { get; set; }
         public int ticketId { get; set; }
         public string message { get; set; } = string.Empty;

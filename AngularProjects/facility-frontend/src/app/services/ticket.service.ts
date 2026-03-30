@@ -3,7 +3,7 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
-  import { CategoryOption, CreateTicketRequest, MyTicketFilters, MyTicketItem, UpdateTicketRequest } from '../models/ticket.models';
+  import { CategoryOption, CreateTicketRequest, MyTicketFilters, MyTicketItem, TicketHistory, UpdateTicketRequest } from '../models/ticket.models';
 
 @Injectable({
   providedIn: 'root'
@@ -133,12 +133,49 @@ export class TicketService {
   }
 
   // ================= Technician Actions =================
+  acceptTechnicianTicket(id: number): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(`${this.apiUrl}/${id}/accept`, {}, { headers: this.getAuthHeaders() });
+  }
+
+  rejectTechnicianTicket(id: number): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(`${this.apiUrl}/${id}/reject`, {}, { headers: this.getAuthHeaders() });
+  }
+
   startTechnicianTicket(id: number): Observable<{ message: string }> {
     return this.http.put<{ message: string }>(`${this.apiUrl}/${id}/start`, {}, { headers: this.getAuthHeaders() });
   }
 
   resolveTechnicianTicket(id: number, data: { imageAfter?: string | null }): Observable<{ message: string }> {
     return this.http.put<{ message: string }>(`${this.apiUrl}/${id}/resolve`, data, { headers: this.getAuthHeaders() });
+  }
+
+  // New aliases/methods for MissionsComponent
+  getActiveMissions(): Observable<MyTicketItem[]> {
+    return this.http.get<MyTicketItem[]>(`${this.apiUrl}/active-missions`, { headers: this.getAuthHeaders() });
+  }
+
+  approveTicket(id: number): Observable<{ message: string }> {
+    return this.acceptTechnicianTicket(id);
+  }
+
+  rejectTicket(id: number): Observable<{ message: string }> {
+    return this.rejectTechnicianTicket(id);
+  }
+
+  startTicket(id: number): Observable<{ message: string }> {
+    return this.startTechnicianTicket(id);
+  }
+
+  pauseTicket(id: number): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(`${this.apiUrl}/${id}/pause`, {}, { headers: this.getAuthHeaders() });
+  }
+
+  resumeTicket(id: number): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(`${this.apiUrl}/${id}/resume`, {}, { headers: this.getAuthHeaders() });
+  }
+
+  resolveTicket(id: number, data: any): Observable<{ message: string }> {
+    return this.resolveTechnicianTicket(id, data);
   }
 
   /**
@@ -165,5 +202,12 @@ export class TicketService {
     return this.http.post<{ message: string }>(`${this.apiUrl}/${id}/close`, data, { headers: this.getAuthHeaders() });
   }
 
+  getTicketHistory(id: number): Observable<TicketHistory[]> {
+    return this.http.get<TicketHistory[]>(`${this.apiUrl}/${id}/history`, { headers: this.getAuthHeaders() });
+  }
+
+  getReporterDashboard(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/reporter-dashboard`, { headers: this.getAuthHeaders() });
+  }
   
 }

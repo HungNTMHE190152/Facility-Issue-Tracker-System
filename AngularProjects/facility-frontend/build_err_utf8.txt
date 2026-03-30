@@ -1,0 +1,36 @@
+﻿
+> facility-frontend@0.0.0 build
+> ng build
+
+[33mΓ¥»[39m Building...
+[32mΓ£ö[39m Building...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m                         [2m | [22m [1mRaw size[22m[2m | [22m[1mEstimated transfer size[22m
+[32mchunk-MTILBAL5.js[39m  [2m | [22m[2m-[22m                             [2m | [22m[36m284.41 kB[39m[2m | [22m               [36m76.47 kB[39m
+[32mstyles-BCPCUDHA.css[39m[2m | [22m[2mstyles[22m                        [2m | [22m [36m21.75 kB[39m[2m | [22m                [36m4.85 kB[39m
+[32mmain-MLEDWKMF.js[39m   [2m | [22m[2mmain[22m                          [2m | [22m  [36m5.77 kB[39m[2m | [22m                [36m1.91 kB[39m
+[32mchunk-VK4WAZZM.js[39m  [2m | [22m[2m-[22m                             [2m | [22m[36m565 bytes[39m[2m | [22m              [36m565 bytes[39m
+
+[1m [22m                  [2m | [22m[1mInitial total[22m                 [2m | [22m[1m312.50 kB[22m[2m | [22m               [1m83.80 kB[22m
+
+[1mLazy chunk files[22m   [2m | [22m[1mNames[22m                         [2m | [22m [1mRaw size[22m[2m | [22m[1mEstimated transfer size[22m
+[32mchunk-FKPYC6ZL.js[39m  [2m | [22m[2mmy-tickets-component[22m          [2m | [22m [36m43.23 kB[39m[2m | [22m                [36m9.87 kB[39m
+[32mchunk-C7GTGTWA.js[39m  [2m | [22m[2mticket-management-component[22m   [2m | [22m [36m40.02 kB[39m[2m | [22m                [36m9.15 kB[39m
+[32mchunk-F6BGKSZX.js[39m  [2m | [22m[2m-[22m                             [2m | [22m [36m34.36 kB[39m[2m | [22m                [36m7.42 kB[39m
+[32mchunk-OCVVQNNS.js[39m  [2m | [22m[2muser-management-component[22m     [2m | [22m [36m31.15 kB[39m[2m | [22m                [36m7.44 kB[39m
+[32mchunk-WUVSLYYU.js[39m  [2m | [22m[2mtechnician-dashboard-component[22m[2m | [22m [36m26.93 kB[39m[2m | [22m                [36m6.66 kB[39m
+[32mchunk-PFOH7EC4.js[39m  [2m | [22m[2mprofile-component[22m             [2m | [22m [36m20.91 kB[39m[2m | [22m                [36m5.26 kB[39m
+[32mchunk-R654QNIK.js[39m  [2m | [22m[2mmissions-component[22m            [2m | [22m [36m20.18 kB[39m[2m | [22m                [36m5.01 kB[39m
+[32mchunk-MARTKZ7E.js[39m  [2m | [22m[2mhome-component[22m                [2m | [22m [36m16.38 kB[39m[2m | [22m                [36m4.33 kB[39m
+[32mchunk-QD2J7TD5.js[39m  [2m | [22m[2mdispatcher-dashboard-component[22m[2m | [22m [36m16.38 kB[39m[2m | [22m                [36m4.57 kB[39m
+[32mchunk-D3HEGFHQ.js[39m  [2m | [22m[2mchange-password-component[22m     [2m | [22m [36m15.28 kB[39m[2m | [22m                [36m4.01 kB[39m
+[32mchunk-LYJBQIVC.js[39m  [2m | [22m[2medit-ticket-component[22m         [2m | [22m [36m14.45 kB[39m[2m | [22m                [36m4.08 kB[39m
+[32mchunk-RBITTCQU.js[39m  [2m | [22m[2mregister-component[22m            [2m | [22m [36m13.21 kB[39m[2m | [22m                [36m3.79 kB[39m
+[32mchunk-6SFKYALX.js[39m  [2m | [22m[2mlogin-component[22m               [2m | [22m [36m12.48 kB[39m[2m | [22m                [36m3.65 kB[39m
+[32mchunk-ONBR5RNO.js[39m  [2m | [22m[2mreset-password-component[22m      [2m | [22m [36m12.47 kB[39m[2m | [22m                [36m3.59 kB[39m
+[32mchunk-ZIKUWK7T.js[39m  [2m | [22m[2mcreate-ticket-component[22m       [2m | [22m [36m11.58 kB[39m[2m | [22m                [36m3.38 kB[39m
+[2m...and 5 more lazy chunks files. Use "--verbose" to show all the files.[22m
+
+Application bundle generation complete. [6.869 seconds] - 2026-03-27T06:06:11.024Z
+
+Output location: C:\Users\Victus\Downloads\POJT (2)\POJT\AngularProjects\facility-frontend\dist\facility-frontend
+
