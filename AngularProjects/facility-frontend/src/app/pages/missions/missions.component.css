@@ -151,6 +151,26 @@ button {
     background: rgba(239, 68, 68, 0.1);
 }
 
+.btn-history {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    padding: 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-history:hover {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: rgba(99, 102, 241, 0.3);
+    color: #6366f1;
+    transform: scale(1.1);
+}
+
 .alert {
     padding: 1rem;
     border-radius: 0.75rem;
@@ -345,4 +365,89 @@ button {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+/* History Modal Specifics */
+.history-modal {
+    max-width: 500px;
+    text-align: left;
+}
+
+.history-list {
+    margin-top: 1.5rem;
+    position: relative;
+    padding-left: 20px;
+}
+
+.history-list::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    background: rgba(99, 102, 241, 0.2);
+}
+
+.history-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.history-marker {
+    position: absolute;
+    left: -20px;
+    top: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #6366f1;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+    z-index: 1;
+}
+
+.history-content {
+    background: rgba(15, 23, 42, 0.4);
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.history-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.old-status {
+    color: #94a3b8;
+    text-decoration: line-through;
+    font-size: 0.9rem;
+}
+
+.arrow {
+    color: #6366f1;
+}
+
+.new-status {
+    color: #22c55e;
+}
+
+.history-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.empty-history, .loading-history {
+    text-align: center;
+    padding: 2rem;
+    color: #94a3b8;
+}
+
+.loading-history p {
+    margin-top: 1rem;
 }

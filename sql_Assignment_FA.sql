@@ -196,9 +196,10 @@ INSERT INTO TicketHistory (TicketID, OldStatus, NewStatus, ChangedBy) VALUES
 (10, 'RESOLVED', 'CLOSED', 2),
 (7, 'OPEN', 'ASSIGNED', 5);
 
-ALTER TABLE Users
-ADD ResetPasswordOTP VARCHAR(10) NULL,
-    ResetPasswordOTPExpiry DATETIME NULL;
+ALTER TABLE Users 
+ADD ResetPasswordOTP NVARCHAR(MAX) NULL, 
+    ResetPasswordOTPExpiry DATETIME2 NULL;
+
 
 
 SELECT * FROM Roles;

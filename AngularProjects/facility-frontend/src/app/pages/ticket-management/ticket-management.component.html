@@ -77,7 +77,7 @@
         <p>No tickets found in the system.</p>
       </div>
 
-      <div class="glass-card ticket-card" *ngFor="let ticket of tickets">
+      <div class="glass-card ticket-card" *ngFor="let ticket of paginatedTickets">
         <div class="ticket-top">
           <h3 [title]="ticket.title">{{ truncateText(ticket.title, 20) }}</h3>
           <span class="t-status" [ngClass]="ticket.status.toLowerCase()">{{ ticket.status }}</span>
@@ -118,6 +118,31 @@
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- Pagination Controls (Demo: 8 items per page) -->
+    <div class="pagination-container" *ngIf="totalPages > 1">
+      <button class="pag-btn prev" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">
+        <svg viewBox="0 0 24 24" fill="none" class="pag-icon" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+
+      <div class="pag-numbers">
+        <button 
+          *ngFor="let p of totalPagesArray" 
+          class="pag-num" 
+          [class.active]="p === currentPage"
+          (click)="goToPage(p)">
+          {{ p }}
+        </button>
+      </div>
+
+      <button class="pag-btn next" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">
+        <svg viewBox="0 0 24 24" fill="none" class="pag-icon" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
     </div>
 
     <div class="bottom-actions">

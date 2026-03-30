@@ -3,13 +3,15 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { NotificationBellComponent } from '../../shared/components/notification-bell/notification-bell.component';
 import { TicketService } from '../../services/ticket.service';
-import { MyTicketItem, MyTicketFilters, ResolveTicketRequest } from '../../models/ticket.models';
+import { MyTicketItem, ResolveTicketRequest, TicketHistory } from '../../models/ticket.models';
+
 import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-missions',
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule, NotificationBellComponent],
+
   templateUrl: './missions.component.html',
   styleUrl: './missions.component.css'
 })
@@ -24,9 +26,16 @@ export class MissionsComponent implements OnInit {
   showResolveModal = false;
   resolveData: ResolveTicketRequest = { imageAfter: null };
   currentDetail: MyTicketItem | null = null;
+  
+  // Lịch sử ticket
+  showHistoryModal = false;
+  historyRecords: TicketHistory[] = [];
+  historyLoading = false;
+  
   compressing = false; // Trạng thái đang nén ảnh
   private readonly maxImageBytes = 15 * 1024 * 1024; // Cho phép chọn ảnh lớn
   private readonly targetImageDataUrlLength = 150_000; // Mục tiêu ~150KB cực kỳ nhẹ
+
 
   constructor(
     private ticketService: TicketService,
@@ -71,7 +80,8 @@ export class MissionsComponent implements OnInit {
       error: (err) => {
         this.submitting = false;
         console.error('Approve Error:', err);
-        this.errorMessage = err.error?.message || 'Không thể chấp nhận nhiệm vụ. Vui lòng thử lại.';
+        this.errorMessage = err?.error?.message || 'Không thể chấp nhận nhiệm vụ. Vui lòng thử lại.';
+
         this.cdr.detectChanges();
         setTimeout(() => this.errorMessage = '', 5000);
       }
@@ -95,7 +105,8 @@ export class MissionsComponent implements OnInit {
       error: (err) => {
         this.submitting = false;
         console.error('Reject Error:', err);
-        this.errorMessage = err.error?.message || 'Không thể từ chối nhiệm vụ.';
+        this.errorMessage = err?.error?.message || 'Không thể từ chối nhiệm vụ.';
+
         this.cdr.detectChanges();
         setTimeout(() => this.errorMessage = '', 5000);
       }
@@ -117,7 +128,8 @@ export class MissionsComponent implements OnInit {
       error: (err) => {
         this.submitting = false;
         console.error('Start Error:', err);
-        this.errorMessage = err.error?.message || 'Lỗi khi bắt đầu';
+        this.errorMessage = err?.error?.message || 'Lỗi khi bắt đầu';
+
         this.cdr.detectChanges();
         setTimeout(() => this.errorMessage = '', 5000);
       }
@@ -139,7 +151,8 @@ export class MissionsComponent implements OnInit {
       error: (err) => {
         this.submitting = false;
         console.error('Pause Error:', err);
-        this.errorMessage = err.error?.message || 'Lỗi khi tạm dừng';
+        this.errorMessage = err?.error?.message || 'Lỗi khi tạm dừng';
+
         this.cdr.detectChanges();
         setTimeout(() => this.errorMessage = '', 5000);
       }
@@ -161,7 +174,8 @@ export class MissionsComponent implements OnInit {
       error: (err) => {
         this.submitting = false;
         console.error('Resume Error:', err);
-        this.errorMessage = err.error?.message || 'Lỗi khi tiếp tục';
+        this.errorMessage = err?.error?.message || 'Lỗi khi tiếp tục';
+
         this.cdr.detectChanges();
         setTimeout(() => this.errorMessage = '', 5000);
       }
@@ -180,19 +194,21 @@ export class MissionsComponent implements OnInit {
     this.resolveData = { imageAfter: null };
   }
 
-  async onResolveFileSelected(event: Event): Promise<void> {
+  async onResolveFileSelected(event: Event | any): Promise<void> {
     const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
+    const file = input?.files?.[0];
+
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
       alert('Vui lòng chọn file hình ảnh (JPG, PNG)');
-      input.value = '';
+      if (input) input.value = '';
       return;
     }
     if (file.size > this.maxImageBytes) {
-      alert('Kích thước ảnh phải <= 2MB');
-      input.value = '';
+      alert('Kích thước ảnh phải <= 15MB');
+      if (input) input.value = '';
+
       return;
     }
 
@@ -217,10 +233,12 @@ export class MissionsComponent implements OnInit {
 
   submitResolve(): void {
     if (!this.currentDetail || this.submitting) return;
+    const ticketId = this.currentDetail.ticketId;
     this.submitting = true;
-    console.log('[DEBUG] Submitting Resolve for Ticket:', this.currentDetail.ticketId);
+    console.log('[DEBUG] Submitting Resolve for Ticket:', ticketId);
     
-    this.ticketService.resolveTicket(this.currentDetail.ticketId, this.resolveData).subscribe({
+    this.ticketService.resolveTicket(ticketId, this.resolveData).subscribe({
+
       next: (res) => {
         console.log('[DEBUG] Resolve Response Success:', res);
         this.submitting = false;
@@ -233,7 +251,8 @@ export class MissionsComponent implements OnInit {
       error: (err) => {
         console.error('[DEBUG] Resolve Response Error:', err);
         this.submitting = false;
-        this.errorMessage = err.error?.message || 'Lỗi khi báo cáo hoàn thành';
+        this.errorMessage = err?.error?.message || 'Lỗi khi báo cáo hoàn thành';
+
         this.cdr.detectChanges();
         setTimeout(() => this.errorMessage = '', 4000);
       }
@@ -261,6 +280,7 @@ export class MissionsComponent implements OnInit {
     let dataUrl = canvas.toDataURL('image/jpeg', quality);
     
     // Nén lặp nếu vẫn quá lớn
+
     while (dataUrl.length > this.targetImageDataUrlLength && quality > 0.2) {
       quality -= 0.1;
       dataUrl = canvas.toDataURL('image/jpeg', quality);
@@ -277,4 +297,30 @@ export class MissionsComponent implements OnInit {
       img.src = url;
     });
   }
+  openHistoryModal(ticketId: number): void {
+    this.historyLoading = true;
+    this.historyRecords = [];
+    this.showHistoryModal = true;
+    this.cdr.detectChanges();
+
+    this.ticketService.getTicketHistory(ticketId).subscribe({
+      next: (data) => {
+        this.historyRecords = data;
+        this.historyLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error fetching history:', err);
+        this.errorMessage = 'Không thể tải lịch sử sự cố.';
+        this.historyLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  closeHistoryModal(): void {
+    this.showHistoryModal = false;
+    this.historyRecords = [];
+  }
 }
+

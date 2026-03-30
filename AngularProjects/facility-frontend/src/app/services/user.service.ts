@@ -57,6 +57,9 @@ export class UserService {
     createUser(user: CreateUserDTO): Observable<any> {
         return this.http.post(this.apiUrl, user, { headers: this.getAuthHeaders() });
     }
+        export_excel(formData:any): Observable<any> {
+        return this.http.post(environment.apiUrl + '/api/Tickets/export-excel', formData, { headers: this.getAuthHeaders() });
+    }
 
     updateUser(id: number, user: UpdateUserDTO): Observable<any> {
         return this.http.put(`${this.apiUrl}/${id}`, user, { headers: this.getAuthHeaders() });

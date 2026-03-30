@@ -5,7 +5,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { TicketService } from '../../services/ticket.service';
 import { CategoryOption, UpdateTicketRequest } from '../../models/ticket.models';
-
+import { Observable } from 'rxjs';
 @Component({
 	selector: 'app-edit-ticket',
 	standalone: true,
@@ -246,4 +246,37 @@ export class EditTicketComponent implements OnInit {
 			}
 		});
 	}
+
+	downloadExcel(): void {
+		this.ticketService.exportTickets().subscribe({
+			next: (res: any) => {
+				if (res && res.url) {
+					window.open(res.url, '_blank');
+				} else {
+					alert('Không tìm thấy đường dẫn tải file!');
+				}
+			},
+			error: (err) => {
+				console.error('Lỗi xuất file:', err);
+				alert('Không thể xuất file Excel!');
+			}
+		});
+  }
+
+  // --- HÀM NHẬP EXCEL ---
+  onFileSelected(event: any): void {
+    const file: File = event.target.files[0];
+    if (file) {
+      this.ticketService.importSupplies(file).subscribe({
+        next: (res) => {
+          alert(res.message || 'Nhập dữ liệu vật tư thành công!');
+          event.target.value = ''; // Reset input
+        },
+        error: (err) => {
+          console.error('Lỗi nhập file:', err);
+          alert('Lỗi: ' + (err.error?.message || 'Không thể upload file Excel'));
+        }
+      });
+    }
+  }	
 }

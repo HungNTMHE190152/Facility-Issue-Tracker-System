@@ -22,6 +22,8 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
   categories: CategoryOption[] = [];
   loading = false;
   hasLoaded = false;
+  currentPage = 1;
+  pageSize = 8;
   private loadTicketsSub?: Subscription;
 
   filters: MyTicketFilters = {
@@ -140,6 +142,7 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
       .pipe(finalize(() => {
         this.loading = false;
         this.hasLoaded = true;
+        this.currentPage = 1; // Reset to first page on load/filter
         this.cdr.detectChanges();
       }))
       .subscribe({
@@ -183,6 +186,29 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
       categoryId: null
     };
     this.loadTickets();
+  }
+
+  // --- Pagination Logic ---
+  get paginatedTickets(): MyTicketItem[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.tickets.slice(start, start + this.pageSize);
+  }
+
+  get totalPages(): number {
+    return Math.ceil(this.tickets.length / this.pageSize);
+  }
+
+  get totalPagesArray(): number[] {
+    const total = this.totalPages;
+    if (total <= 0) return [];
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   getPriorityLabel(priority?: number | null): string {

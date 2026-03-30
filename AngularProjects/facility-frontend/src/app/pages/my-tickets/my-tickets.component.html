@@ -125,6 +125,14 @@
               </svg>
             </button>
           </ng-container>
+          <button
+            *ngIf="ticket.status === 'RESOLVED'"
+            class="btn-secondary"
+            title="Confirm fixed and rate technician"
+            (click)="openReviewModal(ticket)"
+          >
+            Confirm & Rate
+          </button>
         </div>
       </div>
     </div>
@@ -304,6 +312,45 @@
         <button class="btn-secondary" (click)="closeModals()">Cancel</button>
         <button class="btn-danger" (click)="confirmDelete()" [disabled]="loading">
           {{ loading ? 'Deleting...' : 'Delete Ticket' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Review & Close Modal -->
+  <div class="modal-backdrop" *ngIf="showReviewModal" (click)="closeModals()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Confirm Resolution & Review</h3>
+        <button class="close-btn" (click)="closeModals()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Rating (1 - 5)</label>
+          <div class="star-rating-container" (mouseleave)="setHover(0)">
+            <span *ngFor="let star of [1,2,3,4,5]" 
+                  class="star-icon" 
+                  [class.active]="(hoverRating || reviewRating) >= star"
+                  (mouseenter)="setHover(star)"
+                  (click)="setRating(star)">
+              ★
+            </span>
+            <span class="rating-text">{{ (hoverRating || reviewRating) }} stars</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Comment (optional)</label>
+          <textarea class="form-input" rows="3" maxlength="500" [(ngModel)]="reviewComment"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeModals()">Cancel</button>
+        <button class="btn-primary" (click)="submitReviewClose()" [disabled]="loading">
+          {{ loading ? 'Submitting...' : 'Close Ticket' }}
         </button>
       </div>
     </div>
