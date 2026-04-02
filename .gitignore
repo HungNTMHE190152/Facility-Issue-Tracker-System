@@ -12,7 +12,7 @@
 *.user
 *.suo
 *.nupkg
-
+*.txt
 # ASP.NET / local secrets
 appsettings.Local.json
 secrets.json
