@@ -1,10 +1,14 @@
 import { Injectable, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { Notification } from '../models/notification.models';
+import { environment } from '../../environments/environment';
 
-export type NotificationType = 'success' | 'error' | 'info' | 'warning';
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
-export interface Notification {
+export interface ToastNotification {
   id: number;
-  type: NotificationType;
+  type: ToastType;
   message: string;
 }
 
@@ -13,16 +17,37 @@ export interface Notification {
 })
 export class NotificationService {
   private nextId = 0;
-  notifications = signal<Notification[]>([]);
+  toastNotifications = signal<ToastNotification[]>([]);
+  private apiUrl = `${environment.apiUrl}/api/notifications`;
 
-  show(message: string, type: NotificationType = 'info', duration: number = 3000) {
+  constructor(private http: HttpClient) {}
+
+  // Backend Notifications
+  getNotifications(): Observable<Notification[]> {
+    return this.http.get<Notification[]>(this.apiUrl);
+  }
+
+  getUnreadCount(): Observable<number> {
+    return this.http.get<number>(`${this.apiUrl}/unread-count`);
+  }
+
+  markAsRead(id: number): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${id}/read`, {});
+  }
+
+  markAllAsRead(): Observable<any> {
+    return this.http.put(`${this.apiUrl}/read-all`, {});
+  }
+
+  // UI Toast Notifications
+  show(message: string, type: ToastType = 'info', duration: number = 3000) {
     const id = this.nextId++;
-    const newNotification: Notification = { id, message, type };
+    const newToast: ToastNotification = { id, message, type };
     
-    this.notifications.update(prev => [...prev, newNotification]);
+    this.toastNotifications.update(prev => [...prev, newToast]);
 
     setTimeout(() => {
-      this.remove(id);
+      this.removeToast(id);
     }, duration);
   }
 
@@ -42,7 +67,7 @@ export class NotificationService {
     this.show(message, 'warning', duration);
   }
 
-  remove(id: number) {
-    this.notifications.update(prev => prev.filter(n => n.id !== id));
+  removeToast(id: number) {
+    this.toastNotifications.update(prev => prev.filter(n => n.id !== id));
   }
 }

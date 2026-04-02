@@ -26,14 +26,54 @@
                     </ng-container>
 
                     <ng-container *ngIf="isLoggedIn">
-                        <span class="welcome-text">👋 {{ userName }}</span>
-                        <a *ngIf="userRole.toLowerCase() === 'dispatcher' || userRole.toLowerCase() === 'admin'" routerLink="/dispatcher-dashboard"
-                            class="nav-item">Manager</a>
-                        <a *ngIf="userRole.toLowerCase() === 'technician'" routerLink="/technician-dashboard"
-                            class="nav-item">Technician Dashboard</a>
-                        <a routerLink="/tickets/my" class="nav-item">My Tickets</a>
-                        <a routerLink="/profile" class="nav-item">Profile</a>
-                        <button (click)="logout()" class="logout-btn">Logout</button>
+                        <div class="nav-actions">
+                            <!-- Notification Bell -->
+                            <div class="notif-wrapper" *ngIf="userRole.toLowerCase() === 'reporter'" (click)="$event.stopPropagation()">
+                                <button class="notif-btn" (click)="toggleNotificationsPanel()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                    </svg>
+                                    <span *ngIf="unreadCount > 0" class="notif-badge">{{ unreadCount }}</span>
+                                </button>
+
+                                <!-- Notifications Panel -->
+                                <div class="notif-panel" [class.show]="showNotificationsPanel">
+                                    <div class="notif-header">
+                                        <h3>Notifications</h3>
+                                        <button (click)="markAllNotificationsAsRead()" class="mark-read">Mark all as read</button>
+                                    </div>
+                                    <div class="notif-list">
+                                        <div *ngIf="notifications.length === 0" class="empty-notif">
+                                            No notifications found
+                                        </div>
+                                        <div *ngFor="let n of notifications" class="notif-item" [class.unread]="true">
+                                            <div class="notif-icon" [ngClass]="n.type">
+                                                <span *ngIf="n.type === 'success'">✅</span>
+                                                <span *ngIf="n.type === 'info'">ℹ️</span>
+                                                <span *ngIf="n.type === 'warning'">⚠️</span>
+                                            </div>
+                                            <div class="notif-content">
+                                                <p class="notif-msg">{{ n.message }}</p>
+                                                <div class="notif-actions" *ngIf="n.status === 'RESOLVED'">
+                                                    <button class="btn-action-sm" (click)="openReviewModal(n.ticketId)">Review & Close</button>
+                                                </div>
+                                                <span class="notif-time">{{ n.changedAt | date:'short' }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <span class="welcome-text">👋 {{ userName }}</span>
+                            <a *ngIf="userRole.toLowerCase() === 'dispatcher' || userRole.toLowerCase() === 'admin'" routerLink="/dispatcher-dashboard"
+                                class="nav-item">Manager</a>
+                            <a *ngIf="userRole.toLowerCase() === 'technician'" routerLink="/technician-dashboard"
+                                class="nav-item">Technician Dashboard</a>
+                            <a routerLink="/tickets/my" class="nav-item">My Tickets</a>
+                            <a routerLink="/profile" class="nav-item">Profile</a>
+                            <button (click)="logout()" class="logout-btn">Logout</button>
+                        </div>
                     </ng-container>
                 </div>
             </div>
@@ -81,30 +121,44 @@
                         <div class="card-title">Recent Tickets</div>
                     </div>
                     <div class="card-body">
-                        <div class="ticket-row pulse-anim" style="animation-delay: 0s">
-                            <div class="t-icon blue">🔧</div>
-                            <div class="t-info">
-                                <div class="t-line long"></div>
-                                <div class="t-line short"></div>
+                        <ng-container *ngIf="isLoggedIn && userRole.toLowerCase() === 'reporter' && recentTickets.length > 0; else mockup">
+                            <div *ngFor="let t of recentTickets" class="ticket-row pulse-anim" [attr.data-id]="t.ticketId">
+                                <div class="t-icon" [ngClass]="t.categoryName.toLowerCase()">
+                                    {{ t.categoryName.includes('Plumbing') ? '💧' : t.categoryName.includes('Electrical') ? '⚡' : '🔧' }}
+                                </div>
+                                <div class="t-info">
+                                    <div class="t-title-text">{{ t.title }}</div>
+                                    <div class="t-meta">{{ t.createdAt | date:'shortDate' }} • {{ t.categoryName }}</div>
+                                </div>
+                                <div class="t-status" [ngClass]="statusClass(t.status)">{{ t.status }}</div>
                             </div>
-                            <div class="t-status open">Open</div>
-                        </div>
-                        <div class="ticket-row pulse-anim" style="animation-delay: 1.5s">
-                            <div class="t-icon purple">⚡</div>
-                            <div class="t-info">
-                                <div class="t-line long"></div>
-                                <div class="t-line short"></div>
+                        </ng-container>
+                        <ng-template #mockup>
+                            <div class="ticket-row pulse-anim" style="animation-delay: 0s">
+                                <div class="t-icon blue">🔧</div>
+                                <div class="t-info">
+                                    <div class="t-line long"></div>
+                                    <div class="t-line short"></div>
+                                </div>
+                                <div class="t-status open">Open</div>
                             </div>
-                            <div class="t-status progress">In Progress</div>
-                        </div>
-                        <div class="ticket-row pulse-anim" style="animation-delay: 3s">
-                            <div class="t-icon green">💧</div>
-                            <div class="t-info">
-                                <div class="t-line long"></div>
-                                <div class="t-line short"></div>
+                            <div class="ticket-row pulse-anim" style="animation-delay: 1.5s">
+                                <div class="t-icon purple">⚡</div>
+                                <div class="t-info">
+                                    <div class="t-line long"></div>
+                                    <div class="t-line short"></div>
+                                </div>
+                                <div class="t-status progress">In Progress</div>
                             </div>
-                            <div class="t-status resolved">Resolved</div>
-                        </div>
+                            <div class="ticket-row pulse-anim" style="animation-delay: 3s">
+                                <div class="t-icon green">💧</div>
+                                <div class="t-info">
+                                    <div class="t-line long"></div>
+                                    <div class="t-line short"></div>
+                                </div>
+                                <div class="t-status resolved">Resolved</div>
+                            </div>
+                        </ng-template>
                     </div>
                 </div>
 
@@ -116,4 +170,41 @@
             </div>
         </div>
     </main>
+
+    <!-- Review & Close Modal -->
+    <div class="modal-backdrop" *ngIf="showReviewModal" (click)="closeReviewModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h3>Confirm Resolution & Review</h3>
+                <button class="close-btn" (click)="closeReviewModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Rating (1 - 5)</label>
+                    <div class="star-rating-container" (mouseleave)="setHover(0)">
+                        <span *ngFor="let star of [1,2,3,4,5]" class="star-icon"
+                            [class.active]="(hoverRating || reviewRating) >= star" (mouseenter)="setHover(star)"
+                            (click)="setRating(star)">
+                            ★
+                        </span>
+                        <span class="rating-text">{{ (hoverRating || reviewRating) }} stars</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Comment (optional)</label>
+                    <textarea class="form-input" rows="3" maxlength="500" [(ngModel)]="reviewComment" placeholder="Chia sẻ cảm nghĩ của bạn về dịch vụ..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" (click)="closeReviewModal()">Cancel</button>
+                <button class="btn-primary-glow" (click)="submitReviewClose()" [disabled]="loading">
+                    {{ loading ? 'Submitting...' : 'Confirm & Close' }}
+                </button>
+            </div>
+        </div>
+    </div>
 </div>

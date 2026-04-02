@@ -1,0 +1,33 @@
+<div class="notification-wrapper" *ngIf="isLoggedIn">
+    <button class="notification-bell" (click)="toggleNotifications()" [class.has-unread]="unreadCount > 0" title="Notifications">
+        <i class="fas fa-bell"></i>
+        <span *ngIf="unreadCount > 0" class="unread-badge">{{ unreadCount }}</span>
+    </button>
+    
+    <!-- Notification Dropdown -->
+    <div class="notification-dropdown glass-card" *ngIf="showNotifications">
+        <div class="dropdown-header">
+            <h3>Notifications</h3>
+            <button (click)="markAllAsRead()" *ngIf="unreadCount > 0" class="mark-all-btn">Mark all read</button>
+        </div>
+        <div class="notification-list">
+            <div *ngIf="notifications.length === 0" class="empty-notifs">
+                <i class="fas fa-bell-slash"></i>
+                <p>No notifications yet</p>
+            </div>
+            <div *ngFor="let n of notifications" 
+                 class="notif-item" 
+                 [class.unread]="!n.isRead"
+                 (click)="markAsRead(n)">
+                <div class="notif-dot" *ngIf="!n.isRead"></div>
+                <div class="notif-content">
+                    <p>{{ n.message }}</p>
+                    <div class="notif-meta">
+                        <span class="notif-time">{{ n.createdAt | date:'HH:mm dd/MM' }}</span>
+                        <span class="notif-action">Check status →</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

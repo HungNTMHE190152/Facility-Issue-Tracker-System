@@ -1,0 +1,173 @@
+<div class="missions-container">
+    <div class="header-section" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a routerLink="/" class="logo">
+             <div class="logo-box">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                  </svg>
+             </div>
+             <span class="logo-text text-glow">Technician Portal</span>
+        </a>
+    </div>
+
+    <!-- Alert Messages -->
+    <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
+    <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+
+    <div *ngIf="missions.length === 0" class="empty-state">
+        <div class="empty-icon">✓</div>
+        <h2>Hiện không có nhiệm vụ mới</h2>
+        <p>Bạn đã xử lý hết các nhiệm vụ được giao.</p>
+    </div>
+
+    <div class="mission-grid" *ngIf="missions.length > 0">
+        <div class="mission-card" *ngFor="let m of missions">
+            <div class="card-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="ticket-id">#{{ m.ticketId }}</span>
+                    <button class="btn-history" (click)="openHistoryModal(m.ticketId)" title="View History">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 16px; height: 16px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
+                </div>
+                <span class="priority-badge" [ngClass]="'priority-' + m.priority">
+                    Priority {{ m.priority }}
+                </span>
+            </div>
+            
+            <div class="card-body">
+                <h3>{{ m.title }}</h3>
+                <div class="info-row">
+                    <span class="label">Location:</span>
+                    <span class="value">{{ m.location }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Category:</span>
+                    <span class="value">{{ m.categoryName }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Trạng thái:</span>
+                    <span class="value" style="font-weight: bold; color: var(--primary-color);">{{ m.status }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Assigned:</span>
+                    <span class="value">{{ m.assignedAt | date:'short' }}</span>
+                </div>
+            </div>
+
+            <div class="card-actions">
+                <ng-container *ngIf="m.status === 'ASSIGNED'">
+                    <button class="btn-approve" (click)="approve(m.ticketId)" [disabled]="submitting">
+                        <span class="icon">{{ submitting ? '⏳' : '✓' }}</span> 
+                        {{ submitting ? '...' : 'Nhận việc' }}
+                    </button>
+                    <button class="btn-reject" (click)="reject(m.ticketId)" [disabled]="submitting">
+                        <span class="icon">✕</span> Từ chối
+                    </button>
+                </ng-container>
+
+                <ng-container *ngIf="m.status === 'ACCEPTED'">
+                    <button class="btn-approve" style="width: 100%;" (click)="startTicket(m.ticketId)" [disabled]="submitting">
+                        <span class="icon">{{ submitting ? '⏳' : '🚀' }}</span> 
+                        {{ submitting ? '...' : 'Bắt đầu làm' }}
+                    </button>
+                </ng-container>
+
+                <ng-container *ngIf="m.status === 'PAUSED'">
+                    <button class="btn-approve" style="width: 100%; background-color: #3b82f6;" (click)="resumeTicket(m.ticketId)" [disabled]="submitting">
+                        <span class="icon">{{ submitting ? '⏳' : '▶' }}</span> 
+                        {{ submitting ? '...' : 'Tiếp tục công việc' }}
+                    </button>
+                </ng-container>
+
+                <ng-container *ngIf="m.status === 'IN_PROGRESS'">
+                    <button class="btn-reject" style="background-color: #f59e0b; color: #fff; border: none;" (click)="pauseTicket(m.ticketId)" [disabled]="submitting">
+                        <span class="icon">{{ submitting ? '⏳' : '⏸' }}</span> 
+                        {{ submitting ? '...' : 'Tạm dừng' }}
+                    </button>
+                    <button class="btn-approve" style="background-color: #10b981;" (click)="openResolveModal(m)" [disabled]="submitting">
+                        <span class="icon">🏁</span> Hoàn thành
+                    </button>
+                </ng-container>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Lịch sử Ticket -->
+<div class="modal-overlay" *ngIf="showHistoryModal" (click)="closeHistoryModal()">
+    <div class="modal-container history-modal" (click)="$event.stopPropagation()">
+        <h3 class="modal-title">Lịch sử sự cố #{{ historyRecords[0]?.ticketId }}</h3>
+        
+        <div class="history-list" *ngIf="!historyLoading">
+            <div class="history-item" *ngFor="let h of historyRecords">
+                <div class="history-marker"></div>
+                <div class="history-content">
+                    <div class="history-status">
+                        <span class="old-status">{{ h.oldStatus || 'OPEN' }}</span>
+                        <span class="arrow">→</span>
+                        <span class="new-status">{{ h.newStatus }}</span>
+                    </div>
+                    <div class="history-meta">
+                        <span class="history-by">Bởi: {{ h.changedByName }}</span>
+                        <span class="history-time">{{ h.changedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                    </div>
+                </div>
+            </div>
+            <div *ngIf="historyRecords.length === 0" class="empty-history">
+                Chưa có lịch sử thay đổi.
+            </div>
+        </div>
+
+        <div class="loading-history" *ngIf="historyLoading">
+            <div class="spinner-small"></div>
+            <p>Đang tải lịch sử...</p>
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn-primary" (click)="closeHistoryModal()">Đóng</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Giải Quyết Ticket -->
+<div class="modal-overlay" *ngIf="showResolveModal" (click)="closeResolveModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+        <h3 class="modal-title">Báo cáo hoàn thành</h3>
+        <p class="modal-subtitle">Cung cấp hình ảnh khắc phục cho nhiệm vụ <strong>#{{ currentDetail?.ticketId }}</strong>.</p>
+        
+        <div class="upload-section">
+            <div *ngIf="resolveData.imageAfter" class="image-preview">
+                <img [src]="resolveData.imageAfter" class="preview-img">
+                <button (click)="removeResolveImage()" class="remove-img-btn" [disabled]="loading || compressing">✕</button>
+            </div>
+            
+            <div *ngIf="!resolveData.imageAfter && !compressing" (click)="fileInput.click()" class="drop-zone">
+                <div class="upload-icon">📸</div>
+                <div class="upload-text">Tải ảnh minh chứng</div>
+                <div class="upload-hint">Hỗ trợ JPG, PNG (Tự động nén để gửi nhanh)</div>
+            </div>
+
+            <!-- Chỉ báo đang nén -->
+            <div *ngIf="compressing" class="compressing-state">
+                <div class="spinner-small"></div>
+                <span>Đang nén ảnh để gửi nhanh hơn...</span>
+            </div>
+
+            <input type="file" #fileInput accept="image/jpeg, image/png" style="display:none" (change)="onResolveFileSelected($event)">
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="closeResolveModal()" [disabled]="submitting || compressing">Hủy</button>
+            <button type="button" class="btn-primary" (click)="submitResolve()" 
+                    [disabled]="!resolveData.imageAfter || submitting || compressing">
+                <span *ngIf="submitting"><i class="fas fa-spinner fa-spin"></i> Đang gửi...</span>
+                <span *ngIf="!submitting">Gửi báo cáo</span>
+            </button>
+        </div>
+    </div>
+</div>

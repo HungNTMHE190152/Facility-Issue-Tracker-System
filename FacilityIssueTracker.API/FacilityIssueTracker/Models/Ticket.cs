@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace FacilityIssueTracker.Models;
@@ -50,4 +50,6 @@ public partial class Ticket
     public virtual ICollection<TicketHistory> TicketHistories { get; set; } = new List<TicketHistory>();
 
     public virtual ICollection<TicketSupply> TicketSupplies { get; set; } = new List<TicketSupply>();
+
+    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 }

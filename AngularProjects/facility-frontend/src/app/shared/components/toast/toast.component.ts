@@ -8,10 +8,10 @@ import { NotificationService } from '../../../services/notification.service';
   imports: [CommonModule],
   template: `
     <div class="toast-container">
-      <div *ngFor="let n of notificationService.notifications()" 
+      <div *ngFor="let n of notificationService.toastNotifications()" 
            class="toast-item" 
            [class]="n.type"
-           (click)="notificationService.remove(n.id)">
+           (click)="notificationService.removeToast(n.id)">
         <div class="toast-icon">
           <span *ngIf="n.type === 'success'">✅</span>
           <span *ngIf="n.type === 'error'">❌</span>

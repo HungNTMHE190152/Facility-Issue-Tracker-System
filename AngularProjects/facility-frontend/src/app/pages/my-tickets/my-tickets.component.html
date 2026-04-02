@@ -331,13 +331,16 @@
       <div class="modal-body">
         <div class="form-group">
           <label>Rating (1 - 5)</label>
-          <select class="form-input select-input" [(ngModel)]="reviewRating">
-            <option [ngValue]="1">1 star</option>
-            <option [ngValue]="2">2 stars</option>
-            <option [ngValue]="3">3 stars</option>
-            <option [ngValue]="4">4 stars</option>
-            <option [ngValue]="5">5 stars</option>
-          </select>
+          <div class="star-rating-container" (mouseleave)="setHover(0)">
+            <span *ngFor="let star of [1,2,3,4,5]" 
+                  class="star-icon" 
+                  [class.active]="(hoverRating || reviewRating) >= star"
+                  (mouseenter)="setHover(star)"
+                  (click)="setRating(star)">
+              ★
+            </span>
+            <span class="rating-text">{{ (hoverRating || reviewRating) }} stars</span>
+          </div>
         </div>
         <div class="form-group">
           <label>Comment (optional)</label>

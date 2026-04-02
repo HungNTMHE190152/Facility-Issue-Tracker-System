@@ -47,3 +47,16 @@ export interface MyTicketFilters {
   priority?: number | null;
   categoryId?: number | null;
 }
+
+export interface ResolveTicketRequest {
+  imageAfter?: string | null;
+}
+
+export interface TicketHistory {
+  historyId: number;
+  ticketId: number;
+  oldStatus: string;
+  newStatus: string;
+  changedByName: string;
+  changedAt: string;
+}

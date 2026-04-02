@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace FacilityIssueTracker.Models;
@@ -24,6 +24,8 @@ public partial class User
     public virtual ICollection<Ticket> TicketReporters { get; set; } = new List<Ticket>();
 
     public virtual ICollection<Ticket> TicketTechnicians { get; set; } = new List<Ticket>();
+
+    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
     public string? ResetPasswordOTP { get; set; }
     public DateTime? ResetPasswordOTPExpiry { get; set; }

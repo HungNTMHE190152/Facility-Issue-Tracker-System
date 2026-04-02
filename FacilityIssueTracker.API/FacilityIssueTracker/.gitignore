@@ -75,9 +75,6 @@ pnpm-debug.log*
 .env.*
 !.env.example
 
-# Ignore the entire build output directory
-dist-check/
-
 ############################################
 # ===== DATABASE =====
 ############################################
