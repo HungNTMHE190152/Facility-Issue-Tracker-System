@@ -25,6 +25,7 @@
         <div class="auth-section">
           <a routerLink="/tickets/my" class="nav-item active">My Tickets</a>
           <a routerLink="/tickets/create" class="btn-primary-glow compact">+ Create</a>
+          <app-topbar-actions [homeLink]="'/'"></app-topbar-actions>
         </div>
       </div>
     </div>
@@ -73,6 +74,27 @@
           <option [ngValue]="null">All category</option>
           <option *ngFor="let item of categories" [ngValue]="item.categoryId">{{ item.categoryName }}</option>
         </select>
+
+        <input
+          type="date"
+          class="dark-input"
+          [(ngModel)]="filters.fromDate"
+          (ngModelChange)="onFilterChanged()"
+          title="Từ ngày"
+        />
+
+        <input
+          type="date"
+          class="dark-input"
+          [(ngModel)]="filters.toDate"
+          (ngModelChange)="onFilterChanged()"
+          title="Đến ngày"
+        />
+
+        <select class="dark-input" [(ngModel)]="filters.createdSort" (ngModelChange)="onFilterChanged()">
+          <option value="desc">Mới nhất đến cũ nhất</option>
+          <option value="asc">Cũ nhất đến mới nhất</option>
+        </select>
       </div>
 
       <div class="filter-actions">
@@ -99,7 +121,10 @@
         <div class="meta-grid">
           <div class="meta-item"><span class="meta-label">ID</span> #{{ ticket.ticketId }}</div>
           <div class="meta-item"><span class="meta-label">Category</span> {{ ticket.categoryName }}</div>
-          <div class="meta-item"><span class="meta-label">Priority</span> {{ getPriorityLabel(ticket.priority) }}</div>
+          <div class="meta-item">
+            <span class="meta-label">Priority</span>
+            <span class="priority-pill" [ngClass]="getPriorityClass(ticket.priority)">{{ getPriorityLabel(ticket.priority) }}</span>
+          </div>
           <div class="meta-item"><span class="meta-label">Location</span> {{ getLocationValue(ticket) }}</div>
           <div class="meta-item"><span class="meta-label">Created</span> {{ ticket.createdAt | date:'dd/MM/yyyy' }}</div>
           <div class="meta-item"><span class="meta-label">Technician</span> {{ ticket.technicianName || 'Pending' }}</div>
@@ -196,7 +221,7 @@
           </div>
           <div class="detail-item">
             <label>Priority</label>
-            <span>{{ getPriorityLabel(currentDetail.priority) }}</span>
+            <span class="priority-pill" [ngClass]="getPriorityClass(currentDetail.priority)">{{ getPriorityLabel(currentDetail.priority) }}</span>
           </div>
           <div class="detail-item">
             <label>Location</label>

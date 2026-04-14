@@ -4,10 +4,13 @@ using FacilityIssueTracker.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System.Security.Claims;
 using System.IO;          
 using ClosedXML.Excel;   
 using ExcelDataReader;
+using Microsoft.Data.SqlClient;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 
 [Route("api/[controller]")]
@@ -15,13 +18,18 @@ using System.Threading.Tasks;
 [Authorize]
 public class TicketsController : ControllerBase
 {
+    private static readonly string[] ActiveWorkStatuses = new[] { "ASSIGNED", "ACCEPTED", "IN_PROGRESS", "PAUSED" };
+    private static readonly ConcurrentDictionary<string, byte> InFlightActions = new();
+
     private readonly AssContext _context;
     private readonly IEmailService _emailService;
+    private readonly IMemoryCache _cache;
 
-    public TicketsController(AssContext context, IEmailService emailService)
+    public TicketsController(AssContext context, IEmailService emailService, IMemoryCache cache)
     {
         _context = context;
         _emailService = emailService;
+        _cache = cache;
     }
 
     private int GetCurrentUserId()
@@ -34,10 +42,159 @@ public class TicketsController : ControllerBase
 
     private static int GetPriorityHoursAllowed(int? priority)
     {
-        if (!priority.HasValue) return 36;
-        if (priority.Value == 3) return 12;   // High
-        if (priority.Value == 2) return 24;   // Medium
-        return 36;                             // Low/default
+        if (!priority.HasValue) return 3;
+        if (priority.Value == 3) return 1;   // High
+        if (priority.Value == 2) return 2;   // Medium
+        return 3;                             // Low/default
+    }
+
+    private static string NormalizeStatus(string? status)
+    {
+        return (status ?? "OPEN").Trim().ToUpper();
+    }
+
+    private static bool IsAllowedStatusTransition(string? fromStatus, string? toStatus)
+    {
+        var from = NormalizeStatus(fromStatus);
+        var to = NormalizeStatus(toStatus);
+
+        if (from == to)
+            return true;
+
+        return (from, to) switch
+        {
+            ("OPEN", "ASSIGNED") => true,
+            ("ASSIGNED", "ACCEPTED") => true,
+            ("ASSIGNED", "OPEN") => true,
+            ("ACCEPTED", "IN_PROGRESS") => true,
+            ("ACCEPTED", "OPEN") => true,
+            ("IN_PROGRESS", "PAUSED") => true,
+            ("IN_PROGRESS", "RESOLVED") => true,
+            ("PAUSED", "IN_PROGRESS") => true,
+            ("RESOLVED", "CLOSED") => true,
+            _ => false
+        };
+    }
+
+    private bool IsAssignmentExpired(Ticket ticket, DateTime? now = null)
+    {
+        if (!ticket.AssignedAt.HasValue) return false;
+
+        var normalized = (ticket.Status ?? string.Empty).ToUpper();
+        if (normalized != "ASSIGNED") return false;
+
+        var deadline = ticket.AssignedAt.Value.AddHours(GetPriorityHoursAllowed(ticket.Priority));
+        return deadline < (now ?? DateTime.Now);
+    }
+
+    private sealed class SlaEvaluationResult
+    {
+        public DateTime? DueAt { get; set; }
+        public string AlertLevel { get; set; } = "NONE";
+        public int? MinutesRemaining { get; set; }
+    }
+
+    private SlaEvaluationResult EvaluateSla(Ticket ticket, DateTime? now = null)
+    {
+        var result = new SlaEvaluationResult();
+        var current = now ?? DateTime.Now;
+        var normalizedStatus = (ticket.Status ?? "OPEN").ToUpper();
+
+        if (!ActiveWorkStatuses.Contains(normalizedStatus))
+            return result;
+
+        var startAt = ticket.AssignedAt ?? ticket.CreatedAt;
+        if (!startAt.HasValue)
+            return result;
+
+        var allowedHours = GetPriorityHoursAllowed(ticket.Priority);
+        var dueAt = startAt.Value.AddHours(allowedHours);
+        var minutesRemaining = (int)Math.Ceiling((dueAt - current).TotalMinutes);
+        var yellowThresholdMinutes = (int)Math.Ceiling(allowedHours * 60 * 0.2);
+
+        result.DueAt = dueAt;
+        result.MinutesRemaining = minutesRemaining;
+
+        if (minutesRemaining <= 0)
+        {
+            result.AlertLevel = "RED";
+        }
+        else if (minutesRemaining <= yellowThresholdMinutes)
+        {
+            result.AlertLevel = "YELLOW";
+        }
+
+        return result;
+    }
+
+    private async Task PushDispatcherSlaNotificationsAsync(int dispatcherUserId, IEnumerable<MyTicketItemDTO> tickets)
+    {
+        try
+        {
+            var candidates = tickets
+                .Where(t => t.SlaAlertLevel == "YELLOW" || t.SlaAlertLevel == "RED")
+                .Select(t => new { t.TicketId, t.Title, t.SlaAlertLevel, t.DueAt })
+                .ToList();
+
+            if (!candidates.Any())
+                return;
+
+            var candidateTicketIds = candidates.Select(c => c.TicketId).Distinct().ToList();
+
+            var recentNotified = await _context.Notifications
+                .AsNoTracking()
+                .Where(n => n.UserId == dispatcherUserId
+                            && n.TicketId.HasValue
+                            && candidateTicketIds.Contains(n.TicketId.Value)
+                            && n.CreatedAt >= DateTime.Now.AddMinutes(-30)
+                            && n.Message.Contains("[SLA-"))
+                .Select(n => new { ticketId = n.TicketId!.Value, n.Message })
+                .ToListAsync();
+
+            var existingKeys = new HashSet<string>(
+                recentNotified.Select(x =>
+                    x.Message.Contains("[SLA-RED]") ? $"{x.ticketId}:RED" : $"{x.ticketId}:YELLOW"));
+
+            foreach (var item in candidates)
+            {
+                var key = $"{item.TicketId}:{item.SlaAlertLevel}";
+                if (existingKeys.Contains(key))
+                    continue;
+
+                var message = item.SlaAlertLevel == "RED"
+                    ? $"[SLA-RED] Ticket #{item.TicketId} ({item.Title}) da qua han SLA."
+                    : $"[SLA-YELLOW] Ticket #{item.TicketId} ({item.Title}) sap qua han SLA.";
+
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = dispatcherUserId,
+                    TicketId = item.TicketId,
+                    Message = message,
+                    Type = "sla",
+                    Severity = item.SlaAlertLevel == "RED" ? "error" : "warning",
+                    Source = "sla-monitor",
+                    ActionUrl = $"/ticket-management?ticketId={item.TicketId}",
+                    IsRead = false,
+                    CreatedAt = DateTime.Now
+                });
+            }
+
+            await _context.SaveChangesAsync();
+        }
+        catch (SqlException ex) when (ex.Number == 208)
+        {
+            // Backward compatibility: skip SLA notification write if Notifications table is not created yet.
+        }
+    }
+
+    private bool TryBeginSingleFlight(string key)
+    {
+        return InFlightActions.TryAdd(key, 0);
+    }
+
+    private void EndSingleFlight(string key)
+    {
+        InFlightActions.TryRemove(key, out _);
     }
 
     private void FireAndForgetEmail(string? to, string subject, string body)
@@ -187,8 +344,12 @@ public class TicketsController : ControllerBase
     [HttpGet("my-ticket")]
     [HttpGet("my")]
     public async Task<IActionResult> GetMyTickets([FromQuery] string? search, [FromQuery] string? status,
-        [FromQuery] int? priority, [FromQuery] int? categoryId)
+        [FromQuery] int? priority, [FromQuery] int? categoryId, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate,
+        [FromQuery] string? createdSort)
     {
+        if (fromDate.HasValue && toDate.HasValue && fromDate.Value.Date > toDate.Value.Date)
+            return BadRequest(new { message = "fromDate cannot be greater than toDate" });
+
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!int.TryParse(userIdClaim, out var reporterId))
             return Unauthorized("Invalid token user information");
@@ -221,8 +382,27 @@ public class TicketsController : ControllerBase
         if (categoryId.HasValue)
             query = query.Where(x => x.CategoryId == categoryId.Value);
 
-        var tickets = await query
-            .OrderByDescending(x => x.CreatedAt)
+        if (fromDate.HasValue)
+        {
+            var from = fromDate.Value.Date;
+            query = query.Where(x => x.CreatedAt.HasValue && x.CreatedAt.Value >= from);
+        }
+
+        if (toDate.HasValue)
+        {
+            var toExclusive = toDate.Value.Date.AddDays(1);
+            query = query.Where(x => x.CreatedAt.HasValue && x.CreatedAt.Value < toExclusive);
+        }
+
+        var createdSortNormalized = (createdSort ?? "desc").Trim().ToLower();
+        if (createdSortNormalized != "desc" && createdSortNormalized != "asc")
+            return BadRequest(new { message = "createdSort must be 'desc' or 'asc'" });
+
+        var orderedQuery = createdSortNormalized == "asc"
+            ? query.OrderBy(x => x.CreatedAt ?? DateTime.MaxValue)
+            : query.OrderByDescending(x => x.CreatedAt ?? DateTime.MinValue);
+
+        var ticketsRaw = await orderedQuery
             .Select(x => new MyTicketItemDTO
             {
                 TicketId = x.TicketId,
@@ -244,14 +424,35 @@ public class TicketsController : ControllerBase
             })
             .ToListAsync();
 
+        var now = DateTime.Now;
+        var tickets = ticketsRaw.Select(t =>
+        {
+            var sla = EvaluateSla(new Ticket
+            {
+                Priority = t.Priority,
+                Status = t.Status,
+                AssignedAt = t.AssignedAt,
+                CreatedAt = t.CreatedAt
+            }, now);
+
+            t.DueAt = sla.DueAt;
+            t.SlaAlertLevel = sla.AlertLevel;
+            t.SlaMinutesRemaining = sla.MinutesRemaining;
+            return t;
+        }).ToList();
+
         return Ok(tickets);
     }
 
     [HttpGet("all")]
     [Authorize(Roles = "Dispatcher, Admin")]
     public async Task<IActionResult> GetAllTickets([FromQuery] string? search, [FromQuery] string? status,
-        [FromQuery] int? priority, [FromQuery] int? categoryId)
+        [FromQuery] int? priority, [FromQuery] int? categoryId, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate,
+        [FromQuery] string? createdSort)
     {
+        if (fromDate.HasValue && toDate.HasValue && fromDate.Value.Date > toDate.Value.Date)
+            return BadRequest(new { message = "fromDate cannot be greater than toDate" });
+
         var query = _context.Tickets
             .AsNoTracking()
             .Include(x => x.Category)
@@ -280,8 +481,27 @@ public class TicketsController : ControllerBase
         if (categoryId.HasValue)
             query = query.Where(x => x.CategoryId == categoryId.Value);
 
-        var tickets = await query
-            .OrderByDescending(x => x.CreatedAt)
+        if (fromDate.HasValue)
+        {
+            var from = fromDate.Value.Date;
+            query = query.Where(x => x.CreatedAt.HasValue && x.CreatedAt.Value >= from);
+        }
+
+        if (toDate.HasValue)
+        {
+            var toExclusive = toDate.Value.Date.AddDays(1);
+            query = query.Where(x => x.CreatedAt.HasValue && x.CreatedAt.Value < toExclusive);
+        }
+
+        var createdSortNormalized = (createdSort ?? "desc").Trim().ToLower();
+        if (createdSortNormalized != "desc" && createdSortNormalized != "asc")
+            return BadRequest(new { message = "createdSort must be 'desc' or 'asc'" });
+
+        var orderedQuery = createdSortNormalized == "asc"
+            ? query.OrderBy(x => x.CreatedAt ?? DateTime.MaxValue)
+            : query.OrderByDescending(x => x.CreatedAt ?? DateTime.MinValue);
+
+        var ticketsRaw = await orderedQuery
             .Select(x => new MyTicketItemDTO
             {
                 TicketId = x.TicketId,
@@ -302,6 +522,28 @@ public class TicketsController : ControllerBase
                 ReporterName = x.Reporter != null ? x.Reporter.FullName : null
             })
             .ToListAsync();
+
+        var now = DateTime.Now;
+        var tickets = ticketsRaw.Select(t =>
+        {
+            var sla = EvaluateSla(new Ticket
+            {
+                Priority = t.Priority,
+                Status = t.Status,
+                AssignedAt = t.AssignedAt,
+                CreatedAt = t.CreatedAt
+            }, now);
+
+            t.DueAt = sla.DueAt;
+            t.SlaAlertLevel = sla.AlertLevel;
+            t.SlaMinutesRemaining = sla.MinutesRemaining;
+            return t;
+        }).ToList();
+
+        if (int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var dispatcherId))
+        {
+            await PushDispatcherSlaNotificationsAsync(dispatcherId, tickets);
+        }
 
         return Ok(tickets);
     }
@@ -350,6 +592,11 @@ public class TicketsController : ControllerBase
             TechnicianName = ticket.Technician?.FullName
         };
 
+        var ticketSla = EvaluateSla(ticket);
+        dto.DueAt = ticketSla.DueAt;
+        dto.SlaAlertLevel = ticketSla.AlertLevel;
+        dto.SlaMinutesRemaining = ticketSla.MinutesRemaining;
+
         return Ok(dto);
     }
 
@@ -362,14 +609,34 @@ public class TicketsController : ControllerBase
 
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         bool isDispatcherOrAdmin = User.IsInRole("Dispatcher") || User.IsInRole("Admin");
+        bool isOwner = ticket.ReporterId.ToString() == userIdStr;
         var prevStatusForEmail = ticket.Status?.ToUpper();
         string? newStatusForEmail = null;
         bool statusChangedForEmail = false;
 
+        if (isDispatcherOrAdmin && !isOwner)
+        {
+            var hasForbiddenChanges =
+                !string.IsNullOrWhiteSpace(dto.Title) ||
+                !string.IsNullOrWhiteSpace(dto.Description) ||
+                !string.IsNullOrWhiteSpace(dto.Location) ||
+                !string.IsNullOrWhiteSpace(dto.ImageBefore) ||
+                dto.Priority.HasValue ||
+                dto.CategoryId.HasValue;
+
+            if (hasForbiddenChanges)
+            {
+                return BadRequest(new
+                {
+                    message = "Dispatcher/Admin chỉ được cập nhật phân công kỹ thuật viên và trạng thái cho ticket của người khác"
+                });
+            }
+        }
+
         // Nếu là Reporter thì chỉ sửa được vé của chính mình, VÀ chỉ khi vé đang ở mức OPEN
         if (!isDispatcherOrAdmin)
         {
-            if (ticket.ReporterId.ToString() != userIdStr)
+            if (!isOwner)
                 return Forbid();
             if (ticket.Status != null && ticket.Status.ToUpper() != "OPEN")
                 return Forbid(); // Tránh Reporter sửa vé đã tiếp nhận
@@ -393,6 +660,14 @@ public class TicketsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(dto.Status))
         {
             newStatusForEmail = dto.Status.Trim().ToUpper();
+            if (!IsAllowedStatusTransition(ticket.Status, newStatusForEmail))
+            {
+                return BadRequest(new
+                {
+                    message = $"Invalid status transition: {NormalizeStatus(ticket.Status)} -> {newStatusForEmail}"
+                });
+            }
+
             statusChangedForEmail = prevStatusForEmail != newStatusForEmail;
             ticket.Status = newStatusForEmail;
             if (ticket.Status == "ASSIGNED" && ticket.AssignedAt == null)
@@ -540,11 +815,31 @@ public class TicketsController : ControllerBase
     [Authorize(Roles = "Dispatcher")]
     public async Task<IActionResult> AssignTicket(int id, [FromBody] AssignTicketDTO dto)
     {
+        var dispatcherId = GetCurrentUserId();
+        var requestKey = $"assign:{dispatcherId}:{id}";
+        if (!TryBeginSingleFlight(requestKey))
+            return Conflict(new { message = "Yeu cau dang duoc xu ly, vui long khong bam lap lai." });
+
+        try
+        {
         var ticket = await _context.Tickets.FindAsync(id);
         if (ticket == null) return NotFound();
 
-        // Lấy ID của người duyệt (Dispatcher) từ Token
-        var dispatcherId = GetCurrentUserId();
+        var technicianExists = await _context.Users
+            .Include(u => u.Role)
+            .AnyAsync(u => u.UserId == dto.TechnicianId && u.Role.RoleName == "Technician");
+        if (!technicianExists)
+            return BadRequest(new { message = "Technician does not exist or invalid role" });
+
+        if (IsAssignmentExpired(ticket))
+        {
+            ticket.Status = "OPEN";
+            ticket.TechnicianId = null;
+            ticket.AssignedAt = null;
+        }
+
+        if (!IsAllowedStatusTransition(ticket.Status, "ASSIGNED"))
+            return BadRequest(new { message = $"Invalid status transition: {NormalizeStatus(ticket.Status)} -> ASSIGNED" });
 
         ticket.TechnicianId = dto.TechnicianId;
         ticket.DispatcherId = dispatcherId;
@@ -569,6 +864,81 @@ public class TicketsController : ControllerBase
         FireAndForgetEmail(reporterEmail, subject, body);
 
         return Ok(new { message = "Đã phân công kỹ thuật viên thành công" });
+        }
+        finally
+        {
+            EndSingleFlight(requestKey);
+        }
+    }
+
+    [HttpGet("{id}/assignment-suggestions")]
+    [Authorize(Roles = "Dispatcher,Admin")]
+    public async Task<IActionResult> GetAssignmentSuggestions(int id)
+    {
+        var ticket = await _context.Tickets
+            .AsNoTracking()
+            .Include(t => t.Category)
+            .FirstOrDefaultAsync(t => t.TicketId == id);
+
+        if (ticket == null)
+            return NotFound(new { message = "Ticket not found" });
+
+        var techniciansRaw = await _context.Users
+            .AsNoTracking()
+            .Include(u => u.Role)
+            .Where(u => u.Role.RoleName == "Technician")
+            .Select(u => new
+            {
+                u.UserId,
+                u.FullName,
+                CurrentWorkload = u.TicketTechnicians.Count(t => ActiveWorkStatuses.Contains((t.Status ?? "OPEN").ToUpper())),
+                CategoryResolvedCount = u.TicketTechnicians.Count(t =>
+                    t.CategoryId == ticket.CategoryId &&
+                    (((t.Status ?? "").ToUpper() == "RESOLVED") || ((t.Status ?? "").ToUpper() == "CLOSED"))),
+                AverageRating = u.TicketTechnicians
+                    .Where(t => t.Review != null)
+                    .Average(t => (double?)t.Review!.Rating) ?? 0.0
+            })
+            .ToListAsync();
+
+        var suggestions = techniciansRaw
+            .Select(t =>
+            {
+                var ratingScore = (t.AverageRating / 5.0) * 50.0;
+                var workloadScore = Math.Max(0.0, 30.0 - (t.CurrentWorkload * 5.0));
+                var categoryScore = Math.Min(20.0, t.CategoryResolvedCount * 2.0);
+                var totalScore = Math.Round(ratingScore + workloadScore + categoryScore, 2);
+
+                return new
+                {
+                    technicianId = t.UserId,
+                    technicianName = t.FullName,
+                    currentWorkload = t.CurrentWorkload,
+                    averageRating = Math.Round(t.AverageRating, 2),
+                    categoryResolvedCount = t.CategoryResolvedCount,
+                    scoreBreakdown = new
+                    {
+                        ratingScore = Math.Round(ratingScore, 2),
+                        workloadScore = Math.Round(workloadScore, 2),
+                        categoryScore = Math.Round(categoryScore, 2)
+                    },
+                    totalScore
+                };
+            })
+            .OrderByDescending(x => x.totalScore)
+            .ThenBy(x => x.currentWorkload)
+            .Take(5)
+            .ToList();
+
+        return Ok(new
+        {
+            ticketId = ticket.TicketId,
+            categoryId = ticket.CategoryId,
+            categoryName = ticket.Category.CategoryName,
+            recommendedTechnicianId = suggestions.FirstOrDefault()?.technicianId,
+            suggestions,
+            note = "Dispatcher can override and assign any technician."
+        });
     }
 
     // Nhấn Accept
@@ -582,6 +952,25 @@ public class TicketsController : ControllerBase
         var technicianId = GetCurrentUserId();
         if (!ticket.TechnicianId.HasValue || ticket.TechnicianId.Value != technicianId)
             return Forbid();
+
+        if (IsAssignmentExpired(ticket))
+        {
+            var oldStatusExpired = ticket.Status;
+            ticket.Status = "OPEN";
+            ticket.TechnicianId = null;
+            ticket.AssignedAt = null;
+
+            await _context.SaveChangesAsync();
+            await RecordHistory(id, oldStatusExpired, "OPEN (SLA_EXPIRED)");
+
+            return Conflict(new
+            {
+                message = "Nhiệm vụ đã quá hạn nhận theo SLA. Dispatcher cần phân công kỹ thuật viên khác."
+            });
+        }
+
+        if (!IsAllowedStatusTransition(ticket.Status, "ACCEPTED"))
+            return BadRequest(new { message = $"Invalid status transition: {NormalizeStatus(ticket.Status)} -> ACCEPTED" });
 
         var oldStatus = ticket.Status;
         ticket.Status = "ACCEPTED";
@@ -603,6 +992,9 @@ public class TicketsController : ControllerBase
         if (!ticket.TechnicianId.HasValue || ticket.TechnicianId.Value != technicianId)
             return Forbid();
 
+        if (!IsAllowedStatusTransition(ticket.Status, "OPEN"))
+            return BadRequest(new { message = $"Invalid status transition: {NormalizeStatus(ticket.Status)} -> OPEN" });
+
         var oldStatus = ticket.Status;
         ticket.Status = "OPEN";
         ticket.TechnicianId = null;
@@ -623,6 +1015,9 @@ public class TicketsController : ControllerBase
         var technicianId = GetCurrentUserId();
         if (!ticket.TechnicianId.HasValue || ticket.TechnicianId.Value != technicianId)
             return Forbid();
+
+        if (!IsAllowedStatusTransition(ticket.Status, "IN_PROGRESS"))
+            return BadRequest(new { message = $"Invalid status transition: {NormalizeStatus(ticket.Status)} -> IN_PROGRESS" });
 
         var oldStatus = ticket.Status;
         var prevStatus = ticket.Status?.ToUpper();
@@ -657,6 +1052,9 @@ public class TicketsController : ControllerBase
         var technicianId = GetCurrentUserId();
         if (!ticket.TechnicianId.HasValue || ticket.TechnicianId.Value != technicianId)
             return Forbid();
+
+        if (!IsAllowedStatusTransition(ticket.Status, "RESOLVED"))
+            return BadRequest(new { message = $"Invalid status transition: {NormalizeStatus(ticket.Status)} -> RESOLVED" });
 
         var oldStatus = ticket.Status;
         var prevStatus = ticket.Status?.ToUpper();
@@ -695,6 +1093,9 @@ public class TicketsController : ControllerBase
         if (!ticket.TechnicianId.HasValue || ticket.TechnicianId.Value != technicianId)
             return Forbid();
 
+        if (!IsAllowedStatusTransition(ticket.Status, "PAUSED"))
+            return BadRequest(new { message = $"Invalid status transition: {NormalizeStatus(ticket.Status)} -> PAUSED" });
+
         var oldStatus = ticket.Status;
         ticket.Status = "PAUSED";
         await _context.SaveChangesAsync();
@@ -715,6 +1116,9 @@ public class TicketsController : ControllerBase
         if (!ticket.TechnicianId.HasValue || ticket.TechnicianId.Value != technicianId)
             return Forbid();
 
+        if (!IsAllowedStatusTransition(ticket.Status, "IN_PROGRESS"))
+            return BadRequest(new { message = $"Invalid status transition: {NormalizeStatus(ticket.Status)} -> IN_PROGRESS" });
+
         var oldStatus = ticket.Status;
         ticket.Status = "IN_PROGRESS";
         await _context.SaveChangesAsync();
@@ -726,26 +1130,50 @@ public class TicketsController : ControllerBase
     [Authorize(Roles = "Reporter")]
     public async Task<IActionResult> CloseTicket(int id, [FromBody] ReviewDTO dto)
     {
+        if (dto == null)
+            return BadRequest(new { message = "Dữ liệu đánh giá không hợp lệ" });
+
+        var reporterId = GetCurrentUserId();
+        var requestKey = $"close:{reporterId}:{id}";
+        if (!TryBeginSingleFlight(requestKey))
+            return Conflict(new { message = "Yeu cau dang duoc xu ly, vui long khong bam lap lai." });
+
+        try
+        {
+
         var ticket = await _context.Tickets.FindAsync(id);
         if (ticket == null) return NotFound();
 
-        var reporterId = GetCurrentUserId();
         if (ticket.ReporterId != reporterId)
             return Forbid();
+
+        if (!IsAllowedStatusTransition(ticket.Status, "CLOSED"))
+            return BadRequest(new { message = $"Invalid status transition: {NormalizeStatus(ticket.Status)} -> CLOSED" });
 
         var prevStatus = ticket.Status?.ToUpper();
         ticket.Status = "CLOSED";
         ticket.ClosedAt = DateTime.Now;
 
-        // Tạo bản ghi đánh giá mới
-        var review = new Review
+        // Mỗi ticket chỉ có tối đa 1 review: đã có thì cập nhật, chưa có thì thêm mới.
+        var existingReview = await _context.Reviews
+            .FirstOrDefaultAsync(r => r.TicketId == id);
+
+        if (existingReview == null)
         {
-            TicketId = id,
-            Rating = dto.Rating,
-            Comment = dto.Comment,
-            CreatedAt = DateTime.Now
-        };
-        _context.Reviews.Add(review);
+            var review = new Review
+            {
+                TicketId = id,
+                Rating = dto.Rating,
+                Comment = dto.Comment,
+                CreatedAt = DateTime.Now
+            };
+            _context.Reviews.Add(review);
+        }
+        else
+        {
+            existingReview.Rating = dto.Rating;
+            existingReview.Comment = dto.Comment;
+        }
 
         await _context.SaveChangesAsync();
 
@@ -777,19 +1205,21 @@ public class TicketsController : ControllerBase
         }
 
         return Ok(new { message = "Đã đóng ticket và lưu đánh giá" });
+        }
+        finally
+        {
+            EndSingleFlight(requestKey);
+        }
     }
 
     [HttpGet("dashboard-stats")]
     [Authorize(Roles = "Dispatcher,Admin")] // Chỉ quản lý mới xem được thống kê
     public async Task<IActionResult> GetDashboardStats()
     {
-        // 1. Thống kê theo loại sự cố (Pie Chart)
-        var pieChartData = await _context.Tickets
-            .GroupBy(t => t.Category.CategoryName)
-            .Select(g => new { name = g.Key, value = g.Count() })
-            .ToListAsync();
+        const string cacheKey = "dashboard-stats-v1";
+        if (_cache.TryGetValue(cacheKey, out object? cached) && cached != null)
+            return Ok(cached);
 
-        // 2. Thống kê theo 12 tháng gần nhất (Line Chart)
         var now = DateTime.Now;
         var monthStarts = Enumerable.Range(0, 12)
             .Select(i => new DateTime(now.Year, now.Month, 1).AddMonths(-11 + i))
@@ -797,13 +1227,35 @@ public class TicketsController : ControllerBase
         var startAt = monthStarts.First();
         var endAt = monthStarts.Last().AddMonths(1);
 
-        var groupedByMonth = await _context.Tickets
+        var pieChartData = await _context.Tickets
+            .AsNoTracking()
+            .GroupBy(t => t.Category.CategoryName)
+            .Select(g => new { name = g.Key, value = g.Count() })
+            .ToListAsync();
+
+        var monthlyCounts = await _context.Tickets
+            .AsNoTracking()
             .Where(t => t.CreatedAt.HasValue && t.CreatedAt.Value >= startAt && t.CreatedAt.Value < endAt)
             .GroupBy(t => new { t.CreatedAt!.Value.Year, t.CreatedAt!.Value.Month })
             .Select(g => new { g.Key.Year, g.Key.Month, count = g.Count() })
             .ToListAsync();
 
-        var groupedLookup = groupedByMonth
+        var leaderboard = await _context.Users
+            .AsNoTracking()
+            .Where(u => u.Role.RoleName == "Technician")
+            .Select(u => new
+            {
+                FullName = u.FullName,
+                ResolvedCount = u.TicketTechnicians.Count(t => t.Status == "CLOSED"),
+                AverageRating = u.TicketTechnicians
+                    .Where(t => t.Review != null)
+                    .Average(t => t.Review!.Rating) ?? 0
+            })
+            .OrderByDescending(x => x.ResolvedCount)
+            .Take(5)
+            .ToListAsync();
+
+        var groupedLookup = monthlyCounts
             .ToDictionary(x => $"{x.Year:D4}-{x.Month:D2}", x => x.count);
 
         var lineChartData = monthStarts
@@ -814,21 +1266,15 @@ public class TicketsController : ControllerBase
             })
             .ToList();
 
-        // 3. Bảng xếp hạng kỹ thuật viên (Leaderboard)
-        var leaderboard = await _context.Users
-            .Where(u => u.Role.RoleName == "Technician")
-            .Select(u => new {
-                FullName = u.FullName,
-                ResolvedCount = u.TicketTechnicians.Count(t => t.Status == "CLOSED"),
-                AverageRating = u.TicketTechnicians
-                    .Where(t => t.Review != null)
-                    .Average(t => t.Review!.Rating) ?? 0
-            })
-            .OrderByDescending(x => x.ResolvedCount)
-            .Take(5) // Lấy top 5
-            .ToListAsync();
+        var payload = new
+        {
+            pieChartData,
+            lineChartData,
+            leaderboard
+        };
 
-        return Ok(new { pieChartData, lineChartData, leaderboard });
+        _cache.Set(cacheKey, payload, TimeSpan.FromSeconds(30));
+        return Ok(payload);
     }
 
     [HttpPost("export-resolved-excel")]
@@ -1103,7 +1549,8 @@ public class TicketsController : ControllerBase
         var missionsRaw = await _context.Tickets
             .AsNoTracking()
             .Where(t => t.TechnicianId == technicianId && t.Status != "CLOSED")
-            .OrderByDescending(t => t.CreatedAt)
+            .OrderByDescending(t => t.Priority ?? 0)
+            .ThenBy(t => t.CreatedAt ?? DateTime.MaxValue)
             .Include(t => t.Category)
             .Select(t => new
             {

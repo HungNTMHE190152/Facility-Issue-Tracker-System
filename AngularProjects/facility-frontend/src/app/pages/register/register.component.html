@@ -25,6 +25,9 @@
       </div>
 
       <form class="register-form" (ngSubmit)="onSubmit()">
+        <!-- OTP Verification Status -->
+        <!-- Banner removed per user request -->
+
         <!-- Full Name -->
         <div class="input-group">
           <label for="name" class="input-label">Full Name</label>
@@ -47,6 +50,25 @@
             </svg>
             <input id="email" name="email" type="email" autocomplete="email" required [(ngModel)]="user.email"
               class="form-input" placeholder="john@example.com">
+          </div>
+          <button type="button" class="otp-btn" (click)="sendOtp()" [disabled]="isSendingOtp || otpCooldownSeconds > 0 || !user.email">
+            {{ sendOtpButtonText }}
+          </button>
+        </div>
+
+        <!-- OTP -->
+        <div class="input-group">
+          <label for="otp" class="input-label">Email OTP</label>
+          <div class="otp-row">
+            <div class="input-wrapper" style="flex: 1;">
+              <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+              <input id="otp" name="otp" type="text" required [(ngModel)]="user.otp" class="form-input" placeholder="Enter 6-digit OTP" maxlength="6" [disabled]="otpVerified">
+            </div>
+            <button type="button" class="verify-otp-btn" (click)="verifyOtp()" [disabled]="otpVerified || isVerifyingOtp || !otpSent">
+              {{ isVerifyingOtp ? 'Verifying...' : (otpVerified ? '✓ Verified' : 'Verify') }}
+            </button>
           </div>
         </div>
 
@@ -86,8 +108,8 @@
         </div>
 
         <button type="submit" class="submit-btn"
-          [class.btn-active]="user.fullName && user.email && user.password && user.confirmPassword"
-          [disabled]="isLoading">
+          [class.btn-active]="otpVerified && user.fullName && user.email && user.password && user.confirmPassword"
+          [disabled]="!otpVerified || isLoading">
           <span *ngIf="!isLoading">Create Account</span>
           <span *ngIf="isLoading">Creating...</span>
           <svg *ngIf="!isLoading" class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"

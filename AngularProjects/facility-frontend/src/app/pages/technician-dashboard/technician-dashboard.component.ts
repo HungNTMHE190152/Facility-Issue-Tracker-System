@@ -7,6 +7,7 @@ import { PieChartComponent } from '../../shared/components/charts/pie-chart/pie-
 import { LineChartComponent } from '../../shared/components/charts/line-chart/line-chart.component';
 import { NotificationService } from '../../services/notification.service';
 import { finalize } from 'rxjs/operators';
+import { TopbarActionsComponent } from '../../shared/components/topbar-actions/topbar-actions.component';
 
 type TechnicianPieDatum = { name: string; value: number };
 type TechnicianLineDatum = { month: number; count: number };
@@ -14,7 +15,7 @@ type TechnicianLineDatum = { month: number; count: number };
 @Component({
   selector: 'app-technician-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, PieChartComponent, LineChartComponent],
+  imports: [CommonModule, RouterModule, PieChartComponent, LineChartComponent, TopbarActionsComponent],
   templateUrl: './technician-dashboard.component.html',
   styleUrl: './technician-dashboard.component.css',
 })

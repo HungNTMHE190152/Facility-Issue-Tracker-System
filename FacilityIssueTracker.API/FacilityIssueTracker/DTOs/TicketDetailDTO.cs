@@ -20,4 +20,7 @@ public class TicketDetailDTO
     public string ReporterName { get; set; } = string.Empty;
     public int? TechnicianId { get; set; }
     public string? TechnicianName { get; set; }
+    public DateTime? DueAt { get; set; }
+    public string SlaAlertLevel { get; set; } = "NONE";
+    public int? SlaMinutesRemaining { get; set; }
 }

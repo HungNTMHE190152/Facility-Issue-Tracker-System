@@ -44,7 +44,15 @@ export class MissionsComponent implements OnInit {
     this.loading = true;
     this.ticketService.getActiveMissions().subscribe({
       next: (data) => {
-        this.missions = data;
+        this.missions = (data ?? []).sort((a, b) => {
+          const pA = a.priority ?? 0;
+          const pB = b.priority ?? 0;
+          if (pB !== pA) return pB - pA;
+
+          const tA = a.createdAt ? new Date(a.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
+          const tB = b.createdAt ? new Date(b.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
+          return tA - tB;
+        });
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -55,6 +63,13 @@ export class MissionsComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  getPriorityLabel(priority?: number | null): string {
+    if (priority === 3) return 'High';
+    if (priority === 2) return 'Medium';
+    if (priority === 1) return 'Low';
+    return 'N/A';
   }
 
   approve(id: number): void {

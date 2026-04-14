@@ -5,12 +5,12 @@ import { AuthService } from '../../services/auth.services';
 import { TicketService } from '../../services/ticket.service';
 import { NotificationService } from '../../services/notification.service';
 import { Subscription, interval, of } from 'rxjs';
-import { startWith, switchMap } from 'rxjs/operators';
+import { TopbarActionsComponent } from '../../shared/components/topbar-actions/topbar-actions.component';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TopbarActionsComponent],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
@@ -88,14 +88,20 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   startPolling(): void {
     this.stopPolling(); // Prevent duplicate polling
+    // Fetch data immediately on first load
+    this.getDashboardData().subscribe({
+      next: (res: any) => this.handleDashboardResponse(res),
+      error: (err) => console.error('Initial fetch error', err)
+    });
+    // Then set up polling interval
     const pollSub = interval(this.pollIntervalMs)
-      .pipe(
-        startWith(0),
-        switchMap(() => this.getDashboardData())
-      )
       .subscribe({
-        next: (res: any) => this.handleDashboardResponse(res),
-        error: (err) => console.error('Polling error', err)
+        next: () => {
+          this.getDashboardData().subscribe({
+            next: (res: any) => this.handleDashboardResponse(res),
+            error: (err) => console.error('Polling error', err)
+          });
+        }
       });
     this.pollingSub = pollSub;
     this.subs.add(pollSub);

@@ -1,18 +1,19 @@
 import { AfterViewInit, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { TicketService } from '../../services/ticket.service';
 import { CategoryOption, MyTicketFilters, MyTicketItem } from '../../models/ticket.models';
 import { environment } from '../../../environments/environment';
 import { NotificationService } from '../../services/notification.service';
+import { TopbarActionsComponent } from '../../shared/components/topbar-actions/topbar-actions.component';
 
 @Component({
   selector: 'app-ticket-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, TopbarActionsComponent],
   templateUrl: './ticket-management.component.html',
   styleUrl: './ticket-management.component.css'
 })
@@ -20,26 +21,38 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
   private readonly apiBaseUrl = environment.apiUrl;
   tickets: MyTicketItem[] = [];
   categories: CategoryOption[] = [];
+  importLoading = false;
   loading = false;
   hasLoaded = false;
   currentPage = 1;
   pageSize = 8;
   private loadTicketsSub?: Subscription;
+  private pendingOpenTicketId: number | null = null;
 
   filters: MyTicketFilters = {
     search: '',
     status: '',
     priority: null,
-    categoryId: null
+    categoryId: null,
+    fromDate: '',
+    toDate: '',
+    createdSort: 'desc'
   };
 
   constructor(
     private ticketService: TicketService,
     private cdr: ChangeDetectorRef,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private route: ActivatedRoute,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
+    this.route.queryParamMap.subscribe(params => {
+      const ticketIdParam = params.get('ticketId');
+      const parsed = ticketIdParam ? Number(ticketIdParam) : NaN;
+      this.pendingOpenTicketId = Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    });
     this.loadCategories();
     this.startCountdownTimer();
   }
@@ -65,10 +78,11 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
 
   updateCountdowns(): void {
     const now = new Date().getTime();
-    if (this.tickets && this.tickets.length > 0) {
-      // Force UI update by triggering change detection efficiently
+    const visibleTickets = this.paginatedTickets;
+
+    if (visibleTickets && visibleTickets.length > 0) {
       let changed = false;
-      this.tickets.forEach(t => {
+      visibleTickets.forEach(t => {
         if (this.calculateTimeLeft(t, now)) changed = true;
       });
       if (changed) this.cdr.detectChanges();
@@ -99,9 +113,9 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
     
     const assignedTime = new Date(dateStr).getTime();
     
-    let hoursAllowed = 36; // Level 1 (Low) = 36h
-    if (ticket.priority === 3) hoursAllowed = 12; // High
-    else if (ticket.priority === 2) hoursAllowed = 24; // Medium
+    let hoursAllowed = 3; // Low = 3h
+    if (ticket.priority === 3) hoursAllowed = 1; // High = 1h
+    else if (ticket.priority === 2) hoursAllowed = 2; // Medium = 2h
 
     const deadline = assignedTime + (hoursAllowed * 60 * 60 * 1000);
     const diff = deadline - now;
@@ -147,12 +161,28 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
       }))
       .subscribe({
         next: (res) => {
-          this.tickets = (res ?? []).map(ticket => ({
-            ...ticket,
-            location: this.getLocationValue(ticket),
-            imageBefore: this.getImagePath(ticket, 'imageBefore'),
-            imageAfter: this.getImagePath(ticket, 'imageAfter')
-          }));
+          this.tickets = (res ?? [])
+            .map(ticket => ({
+              ...ticket,
+              location: this.getLocationValue(ticket),
+              imageBefore: this.getImagePath(ticket, 'imageBefore'),
+              imageAfter: this.getImagePath(ticket, 'imageAfter')
+            }));
+
+          if (this.pendingOpenTicketId) {
+            const matched = this.tickets.find(t => t.ticketId === this.pendingOpenTicketId);
+            if (matched) {
+              this.openViewModal(matched);
+              this.pendingOpenTicketId = null;
+              this.router.navigate([], {
+                relativeTo: this.route,
+                queryParams: { ticketId: null },
+                queryParamsHandling: 'merge',
+                replaceUrl: true
+              });
+            }
+          }
+
           this.cdr.detectChanges();
         },
         error: (err) => {
@@ -183,9 +213,83 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
       search: '',
       status: '',
       priority: null,
-      categoryId: null
+      categoryId: null,
+      fromDate: '',
+      toDate: '',
+      createdSort: 'desc'
     };
     this.loadTickets();
+  }
+
+  onExportExcel(): void {
+    this.ticketService.exportTickets().subscribe({
+      next: (res: any) => {
+        if (res?.url) {
+          window.open(res.url, '_blank');
+        } else {
+          this.notificationService.error('Download URL was not found.');
+        }
+      },
+      error: (err) => {
+        console.error(err);
+        this.notificationService.error('Export all tickets failed.');
+      }
+    });
+  }
+
+  onExportResolvedExcel(): void {
+    this.ticketService.exportResolvedTickets().subscribe({
+      next: (res: any) => {
+        if (res?.url) {
+          window.open(res.url, '_blank');
+        } else {
+          this.notificationService.error('Resolved report URL was not found.');
+        }
+      },
+      error: (err) => {
+        console.error(err);
+        this.notificationService.error('Export resolved tickets failed.');
+      }
+    });
+  }
+
+  onExportMaintenanceLogExcel(): void {
+    this.ticketService.exportMaintenanceLogExcel().subscribe({
+      next: (res: any) => {
+        if (res?.url) {
+          window.open(res.url, '_blank');
+        } else {
+          this.notificationService.error('Maintenance log URL was not found.');
+        }
+      },
+      error: (err) => {
+        console.error(err);
+        this.notificationService.error('Export maintenance log failed.');
+      }
+    });
+  }
+
+  onImportSuppliesFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    this.importLoading = true;
+    this.ticketService.importSupplies(file).subscribe({
+      next: (res: any) => {
+        this.notificationService.success(res?.message || 'Import excel success');
+        input.value = '';
+      },
+      error: (err) => {
+        console.error(err);
+        this.notificationService.error(err?.error?.message || err?.error || 'Import excel failed');
+      },
+      complete: () => {
+        this.importLoading = false;
+      }
+    });
   }
 
   // --- Pagination Logic ---
@@ -208,7 +312,24 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
     if (page >= 1 && page <= this.totalPages) {
       this.currentPage = page;
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      this.cdr.detectChanges();
     }
+  }
+
+  trackByTicketId(_: number, ticket: MyTicketItem): number {
+    return ticket.ticketId;
+  }
+
+  trackByPage(_: number, page: number): number {
+    return page;
+  }
+
+  trackByCategoryId(_: number, category: CategoryOption): number {
+    return category.categoryId;
+  }
+
+  trackByTechnicianId(_: number, technician: any): number {
+    return technician.userId ?? technician.id ?? technician.email;
   }
 
   getPriorityLabel(priority?: number | null): string {
@@ -218,10 +339,18 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
     return 'N/A';
   }
 
+  getPriorityClass(priority?: number | null): string {
+    if (priority === 3) return 'priority-high';
+    if (priority === 2) return 'priority-medium';
+    if (priority === 1) return 'priority-low';
+    return 'priority-unknown';
+  }
+
   // --- Modal & Action Logic ---
   alertMessage = '';
   isError = false;
   isLoading = false;
+  isAutoAssigning = false;
 
   showViewModal = false;
   showEditModal = false;
@@ -266,9 +395,9 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
           title: res.title,
           description: res.description,
           location: this.getLocationValue(res),
+          reporterName: res.reporterName,
+          categoryName: res.categoryName,
           status: res.status,
-          priority: res.priority,
-          categoryId: res.categoryId,
           technicianId: res.technicianId || 0
         };
         this.showEditModal = true;
@@ -294,7 +423,10 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
   submitEdit(): void {
     if (!this.editData) return;
     this.isLoading = true;
-    this.ticketService.updateTicket(this.editData.ticketId, this.editData).subscribe({
+    this.ticketService.updateTicketManager(this.editData.ticketId, {
+      status: this.editData.status,
+      technicianId: this.editData.technicianId
+    }).subscribe({
       next: () => {
         this.showAlert('Ticket updated successfully', false);
         this.closeModals();
@@ -304,6 +436,46 @@ export class TicketManagementComponent implements OnInit, AfterViewInit, OnDestr
       error: (err) => {
         this.showAlert(err.error?.message || 'Failed to update ticket', true);
         this.isLoading = false;
+      }
+    });
+  }
+
+  autoAssignBestTechnician(): void {
+    if (!this.editData?.ticketId) return;
+
+    this.isAutoAssigning = true;
+    this.ticketService.getAssignmentSuggestions(this.editData.ticketId).subscribe({
+      next: (suggestionsRes) => {
+        const recommendedTechnicianId = suggestionsRes?.recommendedTechnicianId;
+        if (!recommendedTechnicianId) {
+          this.showAlert('Không tìm thấy kỹ thuật viên phù hợp để auto-assign.', true);
+          this.isAutoAssigning = false;
+          return;
+        }
+
+        this.ticketService.assignTicket(this.editData.ticketId, recommendedTechnicianId).subscribe({
+          next: () => {
+            const selectedTech = (suggestionsRes?.suggestions ?? [])
+              .find((x: any) => x.technicianId === recommendedTechnicianId);
+
+            this.editData.technicianId = recommendedTechnicianId;
+            this.editData.status = 'ASSIGNED';
+
+            const techName = selectedTech?.technicianName ?? `#${recommendedTechnicianId}`;
+            this.showAlert(`Đã auto-assign cho ${techName}`, false);
+            this.closeModals();
+            this.loadTickets();
+            this.isAutoAssigning = false;
+          },
+          error: (err) => {
+            this.showAlert(err?.error?.message || 'Auto-assign thất bại', true);
+            this.isAutoAssigning = false;
+          }
+        });
+      },
+      error: (err) => {
+        this.showAlert(err?.error?.message || 'Không lấy được gợi ý auto-assign', true);
+        this.isAutoAssigning = false;
       }
     });
   }

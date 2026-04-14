@@ -32,9 +32,19 @@ namespace FacilityIssueTracker.Services
                     return;
                 }
 
-                var port = int.Parse(_configuration["SmtpSettings:Port"]);
+                var portRaw = _configuration["SmtpSettings:Port"];
+                if (!int.TryParse(portRaw, out var port))
+                {
+                    port = 587;
+                }
+
                 var username = _configuration["SmtpSettings:Username"];
                 var password = _configuration["SmtpSettings:Password"];
+                if (string.IsNullOrWhiteSpace(username))
+                {
+                    _logger.LogWarning("SMTP username is empty. Email not sent.");
+                    return;
+                }
 
                 using var client = new SmtpClient(host, port)
                 {

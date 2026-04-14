@@ -57,7 +57,7 @@ export class LoginComponent implements OnInit {
 
           const role = res.role || localStorage.getItem('role') || '';
           if (role.toLowerCase() === 'dispatcher') {
-            this.router.navigate(['/dispatcher-dashboard']);
+            this.router.navigate(['/manager']);
           } else {
             this.router.navigate(['/']); // hoặc '/profile' tùy bạn
           }

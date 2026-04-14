@@ -11,7 +11,7 @@ export class AuthService {
 
   private apiUrl = `${environment.apiUrl}/api/Auth`;
 
-  private isLoggedInSubject = new BehaviorSubject<boolean>(this.hasToken());
+  private isLoggedInSubject = new BehaviorSubject<boolean>(this.hasValidToken());
   private userNameSubject = new BehaviorSubject<string>('');
   private userRoleSubject = new BehaviorSubject<string>('');
 
@@ -23,8 +23,39 @@ export class AuthService {
     this.loadUserFromStorage();
   }
 
-  private hasToken(): boolean {
-    return !!localStorage.getItem('token');
+  private clearStoredAuth(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('fullName');
+    localStorage.removeItem('role');
+  }
+
+  private isTokenExpired(token: string): boolean {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return true;
+
+      const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const payloadJson = atob(payloadBase64);
+      const payload = JSON.parse(payloadJson) as { exp?: number };
+
+      if (!payload.exp) return true;
+      const nowInSeconds = Math.floor(Date.now() / 1000);
+      return payload.exp <= nowInSeconds;
+    } catch {
+      return true;
+    }
+  }
+
+  private hasValidToken(): boolean {
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+
+    if (this.isTokenExpired(token)) {
+      this.clearStoredAuth();
+      return false;
+    }
+
+    return true;
   }
 
   private loadUserFromStorage() {
@@ -32,18 +63,37 @@ export class AuthService {
     const fullName = localStorage.getItem('fullName') || '';
     const role = localStorage.getItem('role') || 'Reporter';
 
-    if (token) {
+    if (token && !this.isTokenExpired(token)) {
       this.isLoggedInSubject.next(true);
       this.userNameSubject.next(fullName.trim() || 'User');
       this.userRoleSubject.next(role.trim());
     } else {
+      this.clearStoredAuth();
       this.isLoggedInSubject.next(false);
       this.userNameSubject.next('');
       this.userRoleSubject.next('');
     }
   }
 
-  register(data: any): Observable<any> {
+  sendRegisterOtp(email: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/register/send-otp`, { email }).pipe(
+      catchError(err => {
+        console.error('Send register OTP failed:', err);
+        return throwError(() => err);
+      })
+    );
+  }
+
+  verifyRegisterOtp(email: string, otp: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/register/verify-otp`, { email, otp }).pipe(
+      catchError(err => {
+        console.error('Verify register OTP failed:', err);
+        return throwError(() => err);
+      })
+    );
+  }
+
+  register(data: { fullName: string; email: string; password: string; otp: string }): Observable<any> {
     return this.http.post(`${this.apiUrl}/register`, data, { responseType: 'text' }).pipe(
       catchError(err => {
         console.error('Register failed:', err);
@@ -73,9 +123,7 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('fullName');
-    localStorage.removeItem('role');
+    this.clearStoredAuth();
     this.isLoggedInSubject.next(false);
     this.userNameSubject.next('');
     this.userRoleSubject.next('');

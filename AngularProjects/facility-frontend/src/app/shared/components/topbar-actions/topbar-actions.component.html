@@ -1,0 +1,6 @@
+<div class="topbar-actions" *ngIf="auth.isAuthenticated()">
+  <a *ngIf="showHome" [routerLink]="homeLink" class="home-btn">Home</a>
+  <app-notification-bell></app-notification-bell>
+  <span class="welcome-text">Welcome, {{ userName }}</span>
+  <button class="logout-btn" (click)="logout()">Logout</button>
+</div>

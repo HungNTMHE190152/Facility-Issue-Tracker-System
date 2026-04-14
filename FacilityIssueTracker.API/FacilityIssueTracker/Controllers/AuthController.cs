@@ -6,28 +6,87 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using BCrypt.Net;
+using Microsoft.Extensions.Caching.Memory;
 
 [Route("api/[controller]")]
 [ApiController]
 public class AuthController : ControllerBase
 {
+    private const string RegisterOtpCachePrefix = "register-otp:";
+
     private readonly AssContext _context;
     private readonly JwtService _jwt;
     private readonly IEmailService _emailService;
+    private readonly IMemoryCache _cache;
 
-    public AuthController(AssContext context, JwtService jwt, IEmailService emailService)
+    public AuthController(AssContext context, JwtService jwt, IEmailService emailService, IMemoryCache cache)
     {
         _context = context;
         _jwt = jwt;
         _emailService = emailService;
+        _cache = cache;
     }
 
     // ================= REGISTER =================
+    [HttpPost("register/send-otp")]
+    public async Task<IActionResult> SendRegisterOtp(ForgotPasswordDTO dto)
+    {
+        var email = (dto.Email ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(email))
+            return BadRequest(new { message = "Email is required." });
+
+        if (await _context.Users.AnyAsync(x => x.Email == email))
+            return BadRequest(new { message = "Email already exists" });
+
+        var otp = Random.Shared.Next(100000, 999999).ToString();
+        _cache.Set(RegisterOtpCachePrefix + email.ToLowerInvariant(), otp, TimeSpan.FromMinutes(5));
+
+        Console.WriteLine($"\n[DEBUG REGISTER OTP] FOR EMAIL {email} IS: {otp}\n");
+
+        var subject = "Facility Issue Tracker - Registration OTP";
+        var body = $"<h3>Your registration OTP is: <strong>{otp}</strong></h3><p>This OTP expires in 5 minutes.</p>";
+        _ = Task.Run(() => _emailService.SendEmailAsync(email, subject, body));
+
+        return Ok(new { message = "OTP has been sent to your email." });
+    }
+
+    [HttpPost("register/verify-otp")]
+    public async Task<IActionResult> VerifyRegisterOtp(VerifyOtpDTO dto)
+    {
+        var email = (dto.Email ?? string.Empty).Trim();
+        var otp = (dto.Otp ?? string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(email))
+            return BadRequest(new { message = "Email is required." });
+
+        if (string.IsNullOrWhiteSpace(otp))
+            return BadRequest(new { message = "OTP is required." });
+
+        if (!_cache.TryGetValue(RegisterOtpCachePrefix + email.ToLowerInvariant(), out string? cachedOtp)
+            || string.IsNullOrWhiteSpace(cachedOtp)
+            || !string.Equals(cachedOtp, otp, StringComparison.Ordinal))
+        {
+            return BadRequest(new { message = "Invalid or expired OTP." });
+        }
+
+        return Ok(new { message = "OTP verified successfully." });
+    }
+
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterDTO dto)
     {
-        if (await _context.Users.AnyAsync(x => x.Email == dto.Email))
+        var email = (dto.Email ?? string.Empty).Trim();
+        var otp = (dto.Otp ?? string.Empty).Trim();
+
+        if (await _context.Users.AnyAsync(x => x.Email == email))
             return BadRequest("Email already exists");
+
+        if (!_cache.TryGetValue(RegisterOtpCachePrefix + email.ToLowerInvariant(), out string? cachedOtp)
+            || string.IsNullOrWhiteSpace(cachedOtp)
+            || !string.Equals(cachedOtp, otp, StringComparison.Ordinal))
+        {
+            return BadRequest(new { message = "Invalid or expired registration OTP." });
+        }
 
         // mặc định role Reporter (id = 2 ví dụ)
         var role = await _context.Roles
@@ -39,13 +98,14 @@ public class AuthController : ControllerBase
         var user = new User
         {
             FullName = dto.FullName,
-            Email = dto.Email,
+            Email = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             RoleId = role.RoleId
         };
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
+        _cache.Remove(RegisterOtpCachePrefix + email.ToLowerInvariant());
 
         // US-43: Email Notification khi tài khoản mới được tạo
         var subject = "Welcome to Facility Issue Tracker";
@@ -55,7 +115,7 @@ public class AuthController : ControllerBase
   <p>Chào <strong>{System.Net.WebUtility.HtmlEncode(dto.FullName)}</strong>,</p>
   <p>Tài khoản của bạn đã được tạo thành công.</p>
 </div>";
-        _ = Task.Run(() => _emailService.SendEmailAsync(dto.Email, subject, body));
+        _ = Task.Run(() => _emailService.SendEmailAsync(email, subject, body));
 
         return Ok("Registered successfully");
     }
@@ -98,7 +158,9 @@ public class AuthController : ControllerBase
     [HttpGet("profile")]
     public async Task<IActionResult> Profile()
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdClaim, out var userId))
+            return Unauthorized("Invalid token user information");
 
         var user = await _context.Users
             .Include(x => x.Role)
@@ -112,6 +174,9 @@ public class AuthController : ControllerBase
             })
             .FirstOrDefaultAsync();
 
+        if (user == null)
+            return NotFound("Không tìm thấy người dùng");
+
         return Ok(user);
     }
 
@@ -120,9 +185,13 @@ public class AuthController : ControllerBase
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword(ChangePasswordDTO dto)
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdClaim, out var userId))
+            return Unauthorized("Invalid token user information");
 
         var user = await _context.Users.FindAsync(userId);
+        if (user == null)
+            return NotFound("Không tìm thấy người dùng");
 
         if (!BCrypt.Net.BCrypt.Verify(dto.OldPassword, user.PasswordHash))
             return BadRequest("Wrong password");
@@ -195,7 +264,7 @@ public class AuthController : ControllerBase
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
         if (user == null)
-            return Ok(new { message = "Nếu email hợp lệ, mã OTP sẽ được gửi về hộp thư của bạn." });
+            return BadRequest(new { message = "Email does not exist in the system." });
 
         var otp = new Random().Next(100000, 999999).ToString();
         user.ResetPasswordOTP = otp;
@@ -213,7 +282,7 @@ public class AuthController : ControllerBase
         // Chạy ngầm việc gửi email để không làm treo luồng request của người dùng (nếu host/port email sai)
         _ = Task.Run(() => _emailService.SendEmailAsync(dto.Email, subject, body));
 
-        return Ok(new { message = "Nếu email hợp lệ, mã OTP sẽ được gửi về hộp thư của bạn." });
+        return Ok(new { message = "OTP has been sent to your email." });
     }
 
     [HttpPost("reset-password")]
@@ -221,7 +290,7 @@ public class AuthController : ControllerBase
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
         if (user == null)
-            return BadRequest(new { message = "Mã OTP không hợp lệ hoặc đã hết hạn." });
+            return BadRequest(new { message = "Email does not exist in the system." });
 
         if (user.ResetPasswordOTP != dto.Otp || user.ResetPasswordOTPExpiry < DateTime.UtcNow)
             return BadRequest(new { message = "Mã OTP không hợp lệ hoặc đã hết hạn." });

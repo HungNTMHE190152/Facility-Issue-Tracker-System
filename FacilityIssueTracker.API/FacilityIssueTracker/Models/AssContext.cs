@@ -194,6 +194,10 @@ public partial class AssContext : DbContext
         {
             entity.HasKey(e => e.NotificationId);
             entity.Property(e => e.Message).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Type).HasMaxLength(50).IsRequired().HasDefaultValue("general");
+            entity.Property(e => e.Severity).HasMaxLength(20).IsRequired().HasDefaultValue("info");
+            entity.Property(e => e.Source).HasMaxLength(100);
+            entity.Property(e => e.ActionUrl).HasMaxLength(300);
             entity.Property(e => e.UserId).HasColumnName("UserID");
             entity.Property(e => e.TicketId).HasColumnName("TicketID");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");

@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserService, User, Role } from '../../services/user.service';
 import { NotificationService } from '../../services/notification.service';
+import { TopbarActionsComponent } from '../../shared/components/topbar-actions/topbar-actions.component';
 
 @Component({
     selector: 'app-user-management',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, TopbarActionsComponent],
     templateUrl: './user-management.component.html',
     styleUrls: ['./user-management.component.css'],
     providers: [UserService]
@@ -85,7 +86,7 @@ export class UserManagementComponent implements OnInit {
     }
 
     goBack() {
-        this.router.navigate(['/dispatcher-dashboard']);
+        this.router.navigate(['/manager']);
     }
 
     loadUsers() {
