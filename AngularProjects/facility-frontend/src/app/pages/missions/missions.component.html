@@ -35,7 +35,7 @@
                     </button>
                 </div>
                 <span class="priority-badge" [ngClass]="'priority-' + m.priority">
-                    Priority {{ m.priority }}
+                    {{ getPriorityLabel(m.priority) }}
                 </span>
             </div>
             

@@ -64,6 +64,7 @@ builder.Services.AddScoped<JwtService>();
 
 // ================= EMAIL SERVICE =================
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddMemoryCache();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

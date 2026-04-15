@@ -51,6 +51,18 @@ export class TicketService {
       params = params.set('categoryId', String(filters.categoryId));
     }
 
+    if (filters.fromDate?.trim()) {
+      params = params.set('fromDate', filters.fromDate.trim());
+    }
+
+    if (filters.toDate?.trim()) {
+      params = params.set('toDate', filters.toDate.trim());
+    }
+
+    if (filters.createdSort) {
+      params = params.set('createdSort', filters.createdSort);
+    }
+
     return this.http.get<any>(`${this.apiUrl}/my-ticket`, { headers: this.getAuthHeaders(), params }).pipe(
       map((res: any) => {
         if (Array.isArray(res)) {
@@ -84,6 +96,18 @@ export class TicketService {
       params = params.set('categoryId', String(filters.categoryId));
     }
 
+    if (filters.fromDate?.trim()) {
+      params = params.set('fromDate', filters.fromDate.trim());
+    }
+
+    if (filters.toDate?.trim()) {
+      params = params.set('toDate', filters.toDate.trim());
+    }
+
+    if (filters.createdSort) {
+      params = params.set('createdSort', filters.createdSort);
+    }
+
     return this.http.get<any>(`${this.apiUrl}/all`, { headers: this.getAuthHeaders(), params }).pipe(
       map((res: any) => {
         if (Array.isArray(res)) {
@@ -108,6 +132,10 @@ export class TicketService {
   }
 
   updateTicket(id: number, data: UpdateTicketRequest): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(`${this.apiUrl}/${id}`, data, { headers: this.getAuthHeaders() });
+  }
+
+  updateTicketManager(id: number, data: { status?: string; technicianId?: number | null }): Observable<{ message: string }> {
     return this.http.put<{ message: string }>(`${this.apiUrl}/${id}`, data, { headers: this.getAuthHeaders() });
   }
   
@@ -212,6 +240,18 @@ export class TicketService {
 
   getTicketHistory(id: number): Observable<TicketHistory[]> {
     return this.http.get<TicketHistory[]>(`${this.apiUrl}/${id}/history`, { headers: this.getAuthHeaders() });
+  }
+
+  getAssignmentSuggestions(ticketId: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/${ticketId}/assignment-suggestions`, { headers: this.getAuthHeaders() });
+  }
+
+  assignTicket(ticketId: number, technicianId: number): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(
+      `${this.apiUrl}/${ticketId}/assign`,
+      { technicianId },
+      { headers: this.getAuthHeaders() }
+    );
   }
 
   getReporterDashboard(): Observable<any> {

@@ -23,13 +23,17 @@ public class JwtService
         new Claim(ClaimTypes.Role, user.Role.RoleName)
     };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+        var jwtKey = _config["Jwt:Key"] ?? "SecretDefaultKeyDoNotUseInProd";
+        var issuer = _config["Jwt:Issuer"] ?? "FacilityIssueTracker";
+        var audience = _config["Jwt:Audience"] ?? "FacilityIssueTrackerClient";
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
+            issuer: issuer,
+            audience: audience,
             claims: claims,
             expires: DateTime.Now.AddHours(12),
             signingCredentials: creds

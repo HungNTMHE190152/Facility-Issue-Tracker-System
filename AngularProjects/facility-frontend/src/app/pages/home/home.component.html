@@ -27,52 +27,13 @@
 
                     <ng-container *ngIf="isLoggedIn">
                         <div class="nav-actions">
-                            <!-- Notification Bell -->
-                            <div class="notif-wrapper" *ngIf="userRole.toLowerCase() === 'reporter'" (click)="$event.stopPropagation()">
-                                <button class="notif-btn" (click)="toggleNotificationsPanel()">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                                    </svg>
-                                    <span *ngIf="unreadCount > 0" class="notif-badge">{{ unreadCount }}</span>
-                                </button>
-
-                                <!-- Notifications Panel -->
-                                <div class="notif-panel" [class.show]="showNotificationsPanel">
-                                    <div class="notif-header">
-                                        <h3>Notifications</h3>
-                                        <button (click)="markAllNotificationsAsRead()" class="mark-read">Mark all as read</button>
-                                    </div>
-                                    <div class="notif-list">
-                                        <div *ngIf="notifications.length === 0" class="empty-notif">
-                                            No notifications found
-                                        </div>
-                                        <div *ngFor="let n of notifications" class="notif-item" [class.unread]="true">
-                                            <div class="notif-icon" [ngClass]="n.type">
-                                                <span *ngIf="n.type === 'success'">✅</span>
-                                                <span *ngIf="n.type === 'info'">ℹ️</span>
-                                                <span *ngIf="n.type === 'warning'">⚠️</span>
-                                            </div>
-                                            <div class="notif-content">
-                                                <p class="notif-msg">{{ n.message }}</p>
-                                                <div class="notif-actions" *ngIf="n.status === 'RESOLVED'">
-                                                    <button class="btn-action-sm" (click)="openReviewModal(n.ticketId)">Review & Close</button>
-                                                </div>
-                                                <span class="notif-time">{{ n.changedAt | date:'short' }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <span class="welcome-text">👋 {{ userName }}</span>
-                            <a *ngIf="userRole.toLowerCase() === 'dispatcher' || userRole.toLowerCase() === 'admin'" routerLink="/dispatcher-dashboard"
-                                class="nav-item">Manager</a>
+                            <a *ngIf="userRole.toLowerCase() === 'dispatcher' || userRole.toLowerCase() === 'admin'" routerLink="/manager"
+                              class="nav-item">Manager</a>
                             <a *ngIf="userRole.toLowerCase() === 'technician'" routerLink="/technician-dashboard"
                                 class="nav-item">Technician Dashboard</a>
                             <a routerLink="/tickets/my" class="nav-item">My Tickets</a>
                             <a routerLink="/profile" class="nav-item">Profile</a>
-                            <button (click)="logout()" class="logout-btn">Logout</button>
+                            <app-topbar-actions [homeLink]="'/'" [showHome]="false"></app-topbar-actions>
                         </div>
                     </ng-container>
                 </div>
@@ -160,12 +121,6 @@
                             </div>
                         </ng-template>
                     </div>
-                </div>
-
-                <div class="glass-card stat-card floating-delayed">
-                    <div class="stat-icon">📈</div>
-                    <div class="stat-value">98%</div>
-                    <div class="stat-label">Resolution Rate</div>
                 </div>
             </div>
         </div>

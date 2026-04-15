@@ -8,7 +8,7 @@
   <!-- Navbar -->
   <nav class="glass-nav">
     <div class="nav-content">
-      <a routerLink="/dispatcher-dashboard" class="logo">
+      <a routerLink="/manager" class="logo">
         <div class="logo-box">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -19,8 +19,9 @@
 
       <div class="nav-links">
         <div class="auth-section">
-          <a routerLink="/dispatcher-dashboard" class="nav-item">Manager</a>
+          <a routerLink="/manager" class="nav-item">Manager</a>
           <a routerLink="/ticket-management" class="nav-item active">All Tickets</a>
+          <app-topbar-actions [homeLink]="'/'"></app-topbar-actions>
         </div>
       </div>
     </div>
@@ -29,6 +30,29 @@
   <main class="page-inner animate-fade-in-up">
     <div class="header-row">
       <h2 class="page-title">Ticket Management</h2>
+    </div>
+
+    <div class="glass-card data-tools-card">
+      <div class="tools-head">
+        <h3>Data tools</h3>
+        <p>Import and export ticket-related files directly in this page.</p>
+      </div>
+      <div class="tools-grid">
+        <button class="btn-secondary-glass compact" (click)="onExportExcel()">Export all tickets</button>
+        <button class="btn-secondary-glass compact" (click)="onExportResolvedExcel()">Export resolved tickets</button>
+        <button class="btn-secondary-glass compact" (click)="onExportMaintenanceLogExcel()">Export maintenance log</button>
+        <input
+          #suppliesInput
+          type="file"
+          accept=".xlsx,.xls"
+          style="display:none"
+          (change)="onImportSuppliesFileSelected($event)"
+          [disabled]="importLoading"
+        />
+        <button class="btn-primary-glow compact" (click)="suppliesInput.click()" [disabled]="importLoading">
+          {{ importLoading ? 'Importing...' : 'Import excel' }}
+        </button>
+      </div>
     </div>
 
     <!-- Display alert message if any -->
@@ -60,7 +84,28 @@
 
         <select class="dark-input" [(ngModel)]="filters.categoryId" (ngModelChange)="onFilterChanged()">
           <option [ngValue]="null">All category</option>
-          <option *ngFor="let item of categories" [ngValue]="item.categoryId">{{ item.categoryName }}</option>
+          <option *ngFor="let item of categories; trackBy: trackByCategoryId" [ngValue]="item.categoryId">{{ item.categoryName }}</option>
+        </select>
+
+        <input
+          type="date"
+          class="dark-input"
+          [(ngModel)]="filters.fromDate"
+          (ngModelChange)="onFilterChanged()"
+          title="Từ ngày"
+        />
+
+        <input
+          type="date"
+          class="dark-input"
+          [(ngModel)]="filters.toDate"
+          (ngModelChange)="onFilterChanged()"
+          title="Đến ngày"
+        />
+
+        <select class="dark-input" [(ngModel)]="filters.createdSort" (ngModelChange)="onFilterChanged()">
+          <option value="desc">Mới nhất đến cũ nhất</option>
+          <option value="asc">Cũ nhất đến mới nhất</option>
         </select>
       </div>
 
@@ -77,7 +122,7 @@
         <p>No tickets found in the system.</p>
       </div>
 
-      <div class="glass-card ticket-card" *ngFor="let ticket of paginatedTickets">
+      <div class="glass-card ticket-card" *ngFor="let ticket of paginatedTickets; trackBy: trackByTicketId">
         <div class="ticket-top">
           <h3 [title]="ticket.title">{{ truncateText(ticket.title, 20) }}</h3>
           <span class="t-status" [ngClass]="ticket.status.toLowerCase()">{{ ticket.status }}</span>
@@ -88,7 +133,10 @@
         <div class="meta-grid">
           <div class="meta-item"><span class="meta-label">ID</span> #{{ ticket.ticketId }}</div>
           <div class="meta-item"><span class="meta-label">Category</span> {{ ticket.categoryName }}</div>
-          <div class="meta-item"><span class="meta-label">Priority</span> {{ getPriorityLabel(ticket.priority) }}</div>
+          <div class="meta-item">
+            <span class="meta-label">Priority</span>
+            <span class="priority-pill" [ngClass]="getPriorityClass(ticket.priority)">{{ getPriorityLabel(ticket.priority) }}</span>
+          </div>
           <div class="meta-item"><span class="meta-label">Location</span> {{ getLocationValue(ticket) }}</div>
           <div class="meta-item"><span class="meta-label">Reporter</span> {{ ticket.reporterName || 'Unknown' }}</div>
           <div class="meta-item"><span class="meta-label">Technician</span> {{ ticket.technicianName || 'Not assigned' }}</div>
@@ -130,7 +178,7 @@
 
       <div class="pag-numbers">
         <button 
-          *ngFor="let p of totalPagesArray" 
+          *ngFor="let p of totalPagesArray; trackBy: trackByPage" 
           class="pag-num" 
           [class.active]="p === currentPage"
           (click)="goToPage(p)">
@@ -146,7 +194,7 @@
     </div>
 
     <div class="bottom-actions">
-      <a routerLink="/dispatcher-dashboard" class="back-to-home">
+      <a routerLink="/manager" class="back-to-home">
         <svg viewBox="0 0 24 24" fill="none" class="arrow-icon-back" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
         </svg>
@@ -170,58 +218,59 @@
     </div>
     
     <div class="modal-body" *ngIf="currentDetail">
-      <div class="detail-grid">
-        <div class="detail-item detail-full">
-          <label>Title</label>
-          <span>{{ currentDetail.title }}</span>
+      <div class="detail-hero">
+        <div>
+          <div class="detail-kicker">Ticket #{{ currentDetail.ticketId }}</div>
+          <h4 class="detail-title">{{ currentDetail.title }}</h4>
+          <p class="detail-description">{{ currentDetail.description }}</p>
         </div>
-        <div class="detail-item detail-full">
-          <label>Description</label>
-          <span>{{ currentDetail.description }}</span>
-        </div>
-        <div class="detail-item">
-          <label>ID</label>
-          <span>#{{ currentDetail.ticketId }}</span>
-        </div>
-        <div class="detail-item">
-          <label>Status</label>
+        <div class="detail-badges">
           <span class="t-status" [ngClass]="currentDetail.status.toLowerCase()">{{ currentDetail.status }}</span>
+          <span class="priority-pill" [ngClass]="getPriorityClass(currentDetail.priority)">{{ getPriorityLabel(currentDetail.priority) }}</span>
         </div>
-        <div class="detail-item">
-          <label>Category</label>
-          <span>{{ currentDetail.categoryName }}</span>
+      </div>
+
+      <div class="detail-section">
+        <div class="section-label">Overview</div>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <label>Category</label>
+            <span>{{ currentDetail.categoryName }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Location</label>
+            <span>{{ getLocationValue(currentDetail) }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Reporter</label>
+            <span>{{ currentDetail.reporterName || 'Unknown' }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Technician</label>
+            <span>{{ currentDetail.technicianName || 'Not assigned' }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Created At</label>
+            <span>{{ currentDetail.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+          <div class="detail-item" *ngIf="currentDetail.timeLeftStr" [ngClass]="{'pulse-bg-danger': currentDetail.isOverdue}">
+            <label><svg style="width: 16px; height: 16px; display: inline-block; vertical-align: text-bottom; margin-right: 2px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Time Left</label>
+            <span [ngStyle]="{'color': currentDetail.isOverdue ? '#ef4444' : '#eab308', 'font-weight': '800'}">{{ currentDetail.timeLeftStr }}</span>
+          </div>
         </div>
-        <div class="detail-item">
-          <label>Priority</label>
-          <span>{{ getPriorityLabel(currentDetail.priority) }}</span>
-        </div>
-        <div class="detail-item">
-          <label>Location</label>
-          <span>{{ getLocationValue(currentDetail) }}</span>
-        </div>
-        <div class="detail-item">
-          <label>Reporter</label>
-          <span>{{ currentDetail.reporterName || 'Unknown' }}</span>
-        </div>
-        <div class="detail-item">
-          <label>Technician</label>
-          <span>{{ currentDetail.technicianName || 'Not assigned' }}</span>
-        </div>
-        <div class="detail-item">
-          <label>Created At</label>
-          <span>{{ currentDetail.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
-        </div>
-        <div class="detail-item" *ngIf="currentDetail.timeLeftStr" [ngClass]="{'pulse-bg-danger': currentDetail.isOverdue}">
-          <label><svg style="width: 16px; height: 16px; display: inline-block; vertical-align: text-bottom; margin-right: 2px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Time Left</label>
-          <span [ngStyle]="{'color': currentDetail.isOverdue ? '#ef4444' : '#eab308', 'font-weight': '800', 'font-size': '1.1rem'}">{{ currentDetail.timeLeftStr }}</span>
-        </div>
+      </div>
+
+      <div class="detail-section" *ngIf="currentDetail.imageBefore || currentDetail.imageAfter">
+        <div class="section-label">Images</div>
+        <div class="image-grid">
           <div class="detail-item detail-full" *ngIf="currentDetail.imageBefore">
-           <label>Image Before</label>
+            <label>Image Before</label>
             <img [src]="getImageUrl(currentDetail.imageBefore)" class="detail-image" alt="Image Before" (error)="onImageError($event)">
-        </div>
-        <div class="detail-item detail-full" *ngIf="currentDetail.imageAfter">
-           <label>Image After</label>
+          </div>
+          <div class="detail-item detail-full" *ngIf="currentDetail.imageAfter">
+            <label>Image After</label>
             <img [src]="getImageUrl(currentDetail.imageAfter)" class="detail-image" alt="Image After" (error)="onImageError($event)">
+          </div>
         </div>
       </div>
     </div>
@@ -230,9 +279,16 @@
 
 <!-- Edit Modal -->
 <div class="modal-backdrop" *ngIf="showEditModal" (click)="closeModals()">
-  <div class="modal-content glass-card" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h3>Edit & Assign Ticket</h3>
+  <div class="modal-content edit-modal glass-card" (click)="$event.stopPropagation()">
+    <div class="modal-header edit-modal-header">
+      <div class="modal-header-copy">
+        <div class="modal-eyebrow">Ticket Editor</div>
+        <h3>Edit Ticket</h3>
+      </div>
+      <div class="modal-header-meta" *ngIf="editData">
+        <span class="ticket-chip">#{{ editData.ticketId }}</span>
+        <span class="ticket-chip subtle">{{ editData.status }}</span>
+      </div>
       <button class="close-btn" (click)="closeModals()">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -240,57 +296,49 @@
       </button>
     </div>
     <div class="modal-body" *ngIf="editData">
+      <div class="edit-form-grid">
+        <div class="form-group full-span">
+          <label>Thông tin ticket</label>
+          <div class="glass-input" style="display:grid;gap:8px;">
+            <div><strong>Title:</strong> {{ editData.title }}</div>
+            <div><strong>Description:</strong> {{ editData.description }}</div>
+            <div><strong>Location:</strong> {{ editData.location }}</div>
+            <div><strong>Category:</strong> {{ editData.categoryName }}</div>
+            <div><strong>Reporter:</strong> {{ editData.reporterName || 'N/A' }}</div>
+          </div>
+        </div>
+
         <div class="form-group">
-            <label>Title *</label>
-            <input type="text" [(ngModel)]="editData.title" class="glass-input" maxlength="200" placeholder="Short issue title" />
+          <label>Status</label>
+          <select [(ngModel)]="editData.status" class="glass-input select-input">
+            <option value="OPEN">OPEN</option>
+            <option value="ASSIGNED">ASSIGNED</option>
+            <option value="ACCEPTED">ACCEPTED</option>
+            <option value="IN_PROGRESS">IN_PROGRESS</option>
+            <option value="PAUSED">PAUSED</option>
+            <option value="RESOLVED">RESOLVED</option>
+            <option value="CLOSED">CLOSED</option>
+          </select>
         </div>
+
         <div class="form-group">
-            <label>Description *</label>
-            <textarea [(ngModel)]="editData.description" class="glass-input" rows="4" maxlength="1000" placeholder="Describe the issue details"></textarea>
+          <label>Assign Technician</label>
+          <select [(ngModel)]="editData.technicianId" class="glass-input select-input">
+            <option [ngValue]="0">--- Unassigned ---</option>
+            <option *ngFor="let tech of technicians; trackBy: trackByTechnicianId" [ngValue]="tech.userId">{{ tech.fullName }} ({{tech.email}})</option>
+          </select>
         </div>
-        <div class="modal-form-row">
-          <div class="form-group">
-            <label>Location *</label>
-            <input type="text" [(ngModel)]="editData.location" class="glass-input" maxlength="100" placeholder="Building/Floor/Room" />
-          </div>
-          <div class="form-group">
-            <label>Category *</label>
-            <select [(ngModel)]="editData.categoryId" class="glass-input select-input">
-              <option *ngFor="let cat of categories" [ngValue]="cat.categoryId">{{ cat.categoryName }}</option>
-            </select>
-          </div>
-        </div>
-        <div class="modal-form-row">
-          <div class="form-group">
-            <label>Priority</label>
-            <select [(ngModel)]="editData.priority" class="glass-input select-input">
-              <option [ngValue]="1">Low</option>
-              <option [ngValue]="2">Medium</option>
-              <option [ngValue]="3">High</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Status</label>
-            <select [(ngModel)]="editData.status" class="glass-input select-input">
-              <option value="OPEN">OPEN</option>
-              <option value="ASSIGNED">ASSIGNED</option>
-              <option value="IN_PROGRESS">IN_PROGRESS</option>
-              <option value="RESOLVED">RESOLVED</option>
-              <option value="CLOSED">CLOSED</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-            <label>Assign Technician</label>
-            <select [(ngModel)]="editData.technicianId" class="glass-input select-input">
-                <option [ngValue]="0">--- Unassigned ---</option>
-                <option *ngFor="let tech of technicians" [ngValue]="tech.userId">{{ tech.fullName }} ({{tech.email}})</option>
-            </select>
-        </div>
+      </div>
     </div>
     <div class="modal-footer">
         <button class="btn-secondary-glass compact" (click)="closeModals()">Cancel</button>
-        <button class="btn-primary-glow compact" (click)="submitEdit()" [disabled]="isLoading">
+        <button class="btn-secondary-glass compact manager-action-btn" (click)="autoAssignBestTechnician()" [disabled]="isLoading || isAutoAssigning">
+        {{ isAutoAssigning ? 'Auto assigning...' : 'Auto-assign tốt nhất' }}
+      </button>
+        <button class="btn-primary-glow compact manager-save-btn" (click)="submitEdit()" [disabled]="isLoading">
+            <svg class="save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
             {{ isLoading ? 'Saving...' : 'Save Changes' }}
         </button>
     </div>

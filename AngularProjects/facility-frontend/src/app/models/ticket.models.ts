@@ -46,6 +46,9 @@ export interface MyTicketFilters {
   status?: string;
   priority?: number | null;
   categoryId?: number | null;
+  fromDate?: string;
+  toDate?: string;
+  createdSort?: 'desc' | 'asc';
 }
 
 export interface ResolveTicketRequest {

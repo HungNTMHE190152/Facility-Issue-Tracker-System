@@ -614,20 +614,20 @@
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-    width: 8px;
+    width: 0;
+    height: 0;
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f5f9;
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
+    background: transparent;
 }
 
-::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+html, body {
+    scrollbar-width: none;
 }
 
 /* Notification System */

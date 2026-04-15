@@ -9,7 +9,7 @@
         <!-- Header -->
         <header class="glass-nav">
             <div class="nav-content">
-                <a routerLink="/" class="logo">
+                <a routerLink="/manager" class="logo">
                      <div class="logo-box">
                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
@@ -17,29 +17,10 @@
                      </div>
                      <span class="logo-text text-glow">Dispatcher Portal</span>
                 </a>
-                <div class="user-info">
-                <button class="logout-btn" (click)="onExportExcel()">Export all tickets</button>
-                <button class="logout-btn" (click)="onExportResolvedExcel()">Export resolved tickets</button>
-                <button class="logout-btn" (click)="onExportMaintenanceLogExcel()">Export maintenance log</button>
-                    <input
-                        #suppliesInput
-                        type="file"
-                        accept=".xlsx,.xls"
-                        style="display:none"
-                        (change)="onImportSuppliesFileSelected($event)"
-                        [disabled]="importLoading"
-                    />
-                    <button class="logout-btn" (click)="suppliesInput.click()" [disabled]="importLoading">
-                        {{ importLoading ? 'Importing...' : 'Import excel' }}
-                    </button>
-                     <button class="logout-btn" (click)="goHome()">
-                          <i class="fas fa-home"></i> Home
-                     </button>
-                     <span class="welcome-text">Welcome, {{ userName }}</span>
-                     <button class="logout-btn" (click)="logout()">
-                          <i class="fas fa-sign-out-alt"></i> Logout
-                     </button>
-                </div>
+
+                 <div class="user-info">
+                     <app-topbar-actions [homeLink]="'/'"></app-topbar-actions>
+                 </div>
             </div>
         </header>
 
@@ -49,36 +30,12 @@
                   <p class="hero-desc">Manage the system, assign work, and track the status of support requests.</p>
              </div>
 
-             <div class="glass-card" style="padding: 1rem; margin-bottom: 1rem;">
-                <h3 style="margin:0 0 0.75rem 0;">Dashboard statistics</h3>
-                <div *ngIf="dashboardLoading">Loading dashboard...</div>
-                <div *ngIf="!dashboardLoading && dashboardError" style="padding:0.75rem; color:#b91c1c; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 12px;">
-                    {{ dashboardError }}
-                </div>
-                <div *ngIf="!dashboardLoading && !dashboardError" style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <app-pie-chart [data]="pieChartData"></app-pie-chart>
-                    <app-line-chart [data]="lineChartData"></app-line-chart>
-                </div>
-                <div *ngIf="!dashboardLoading && !dashboardError" style="margin-top: 1rem;">
-                    <h4 style="margin:0 0 0.5rem 0;">Technician Leaderboard</h4>
-                    <div *ngIf="leaderboard.length === 0">No leaderboard data.</div>
-                    <table *ngIf="leaderboard.length > 0" style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr>
-                                <th style="text-align:left; padding:0.5rem;">Technician</th>
-                                <th style="text-align:left; padding:0.5rem;">Resolved/CLOSED tickets</th>
-                                <th style="text-align:left; padding:0.5rem;">Avg. rating</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngFor="let item of leaderboard">
-                                <td style="padding:0.5rem;">{{ item.fullName }}</td>
-                                <td style="padding:0.5rem;">{{ item.resolvedCount }}</td>
-                                <td style="padding:0.5rem;">{{ item.averageRating | number:'1.1-2' }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+             <div class="glass-card manager-entry-card">
+                <h3>Dashboard statistics</h3>
+                <p>Open dedicated statistics page for charts and technician leaderboard.</p>
+                <button class="btn-primary-glow stats-open-btn" routerLink="/manager/statistics">
+                    Open statistics
+                </button>
              </div>
 
              <!-- Action Cards -->
@@ -86,7 +43,12 @@
                  <!-- User Management Card -->
                  <div class="glass-card action-card floating">
                      <div class="card-icon blue-icon">
-                         <i class="fas fa-users-cog"></i>
+                         <svg class="card-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                             <path stroke-linecap="round" stroke-linejoin="round" d="M16 11a4 4 0 10-8 0 4 4 0 008 0z"></path>
+                             <path stroke-linecap="round" stroke-linejoin="round" d="M3.5 20a8.5 8.5 0 0117 0"></path>
+                             <path stroke-linecap="round" stroke-linejoin="round" d="M18.5 4.5l1 1"></path>
+                             <path stroke-linecap="round" stroke-linejoin="round" d="M20.5 6.5l-1 1"></path>
+                         </svg>
                      </div>
                      <div class="card-content">
                          <h3>User Management</h3>
@@ -94,7 +56,11 @@
                      </div>
                      <div class="card-action">
                          <button class="btn-primary-glow" routerLink="/user-management">
-                             Access <i class="fas fa-arrow-right arrow-icon"></i>
+                             Access
+                             <svg class="arrow-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 10h12"></path>
+                                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 5l5 5-5 5"></path>
+                             </svg>
                          </button>
                      </div>
                  </div>
@@ -102,7 +68,12 @@
                  <!-- Ticket Management Card -->
                  <div class="glass-card action-card floating-delayed">
                      <div class="card-icon purple-icon">
-                         <i class="fas fa-clipboard-list"></i>
+                         <svg class="card-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                             <rect x="6" y="4" width="12" height="16" rx="2"></rect>
+                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 8h6"></path>
+                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6"></path>
+                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 16h4"></path>
+                         </svg>
                      </div>
                      <div class="card-content">
                          <h3>Ticket Management</h3>
@@ -110,7 +81,11 @@
                      </div>
                      <div class="card-action">
                          <button class="btn-primary-glow" routerLink="/ticket-management">
-                             Access <i class="fas fa-arrow-right arrow-icon"></i>
+                             Access
+                             <svg class="arrow-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 10h12"></path>
+                                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 5l5 5-5 5"></path>
+                             </svg>
                          </button>
                      </div>
                  </div>

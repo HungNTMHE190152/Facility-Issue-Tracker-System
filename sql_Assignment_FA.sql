@@ -1,10 +1,10 @@
 -- =========================
 -- CREATE DATABASE
 -- =========================
-CREATE DATABASE ass;
+CREATE DATABASE assignment;
 GO
 
-USE ass;
+USE assignment;
 GO
 
 -- =========================
@@ -73,7 +73,7 @@ CREATE TABLE Tickets (
     Location NVARCHAR(100) NOT NULL,
     Priority INT CHECK (Priority BETWEEN 1 AND 3),
     Status VARCHAR(20) 
-        CHECK (Status IN ('OPEN','ASSIGNED','IN_PROGRESS','RESOLVED','CLOSED'))
+        CHECK (Status IN ('OPEN','ASSIGNED','ACCEPTED','IN_PROGRESS','PAUSED','RESOLVED','CLOSED'))
         DEFAULT 'OPEN',
 
     ImageBefore NVARCHAR(MAX),
@@ -177,9 +177,9 @@ CREATE TABLE TicketHistory (
     HistoryID INT PRIMARY KEY IDENTITY(1,1),
     TicketID INT NOT NULL FOREIGN KEY REFERENCES Tickets(TicketID),
     OldStatus VARCHAR(20) 
-        CHECK (OldStatus IN ('OPEN','ASSIGNED','IN_PROGRESS','RESOLVED','CLOSED')),
+        CHECK (OldStatus IN ('OPEN','ASSIGNED','ACCEPTED','IN_PROGRESS','PAUSED','RESOLVED','CLOSED')),
     NewStatus VARCHAR(20) 
-        CHECK (NewStatus IN ('OPEN','ASSIGNED','IN_PROGRESS','RESOLVED','CLOSED')),
+        CHECK (NewStatus IN ('OPEN','ASSIGNED','ACCEPTED','IN_PROGRESS','PAUSED','RESOLVED','CLOSED')),
     ChangedBy INT NOT NULL FOREIGN KEY REFERENCES Users(UserID),
     ChangedAt DATETIME DEFAULT GETDATE()
 );
@@ -196,9 +196,56 @@ INSERT INTO TicketHistory (TicketID, OldStatus, NewStatus, ChangedBy) VALUES
 (10, 'RESOLVED', 'CLOSED', 2),
 (7, 'OPEN', 'ASSIGNED', 5);
 
-ALTER TABLE Users 
-ADD ResetPasswordOTP NVARCHAR(MAX) NULL, 
-    ResetPasswordOTPExpiry DATETIME2 NULL;
+-- =========================
+-- 9. NOTIFICATIONS
+-- =========================
+IF OBJECT_ID('dbo.Notifications', 'U') IS NULL
+BEGIN
+    CREATE TABLE Notifications (
+        NotificationID INT PRIMARY KEY IDENTITY(1,1),
+        UserID INT NOT NULL,
+        TicketID INT NULL,
+        Message NVARCHAR(500) NOT NULL,
+        Type NVARCHAR(50) NOT NULL DEFAULT N'general',
+        Severity NVARCHAR(20) NOT NULL DEFAULT N'info',
+        Source NVARCHAR(100) NULL,
+        ActionUrl NVARCHAR(300) NULL,
+        IsRead BIT NOT NULL DEFAULT 0,
+        CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT FK_Notifications_Users FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE,
+        CONSTRAINT FK_Notifications_Tickets FOREIGN KEY (TicketID) REFERENCES Tickets(TicketID) ON DELETE SET NULL
+    );
+END;
+
+IF COL_LENGTH('dbo.Notifications', 'Type') IS NULL
+BEGIN
+    ALTER TABLE Notifications ADD Type NVARCHAR(50) NOT NULL CONSTRAINT DF_Notifications_Type DEFAULT N'general';
+END;
+
+IF COL_LENGTH('dbo.Notifications', 'Severity') IS NULL
+BEGIN
+    ALTER TABLE Notifications ADD Severity NVARCHAR(20) NOT NULL CONSTRAINT DF_Notifications_Severity DEFAULT N'info';
+END;
+
+IF COL_LENGTH('dbo.Notifications', 'Source') IS NULL
+BEGIN
+    ALTER TABLE Notifications ADD Source NVARCHAR(100) NULL;
+END;
+
+IF COL_LENGTH('dbo.Notifications', 'ActionUrl') IS NULL
+BEGIN
+    ALTER TABLE Notifications ADD ActionUrl NVARCHAR(300) NULL;
+END;
+
+IF COL_LENGTH('dbo.Users', 'ResetPasswordOTP') IS NULL
+BEGIN
+    ALTER TABLE Users ADD ResetPasswordOTP NVARCHAR(MAX) NULL;
+END;
+
+IF COL_LENGTH('dbo.Users', 'ResetPasswordOTPExpiry') IS NULL
+BEGIN
+    ALTER TABLE Users ADD ResetPasswordOTPExpiry DATETIME2 NULL;
+END;
 
 
 
@@ -210,3 +257,4 @@ SELECT * FROM Reviews;
 SELECT * FROM Supplies;
 SELECT * FROM TicketSupplies;
 SELECT * FROM TicketHistory;
+SELECT * FROM Notifications;

@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Notification } from '../models/notification.models';
 import { environment } from '../../environments/environment';
@@ -23,8 +23,16 @@ export class NotificationService {
   constructor(private http: HttpClient) {}
 
   // Backend Notifications
-  getNotifications(): Observable<Notification[]> {
-    return this.http.get<Notification[]>(this.apiUrl);
+  getNotifications(filters?: { unreadOnly?: boolean; type?: string }): Observable<Notification[]> {
+    let params = new HttpParams();
+    if (filters?.unreadOnly) {
+      params = params.set('unreadOnly', 'true');
+    }
+    if (filters?.type?.trim()) {
+      params = params.set('type', filters.type.trim());
+    }
+
+    return this.http.get<Notification[]>(this.apiUrl, { params });
   }
 
   getUnreadCount(): Observable<number> {

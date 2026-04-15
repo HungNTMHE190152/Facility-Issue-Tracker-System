@@ -1,0 +1,112 @@
+<div class="stats-page">
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+  <div class="grid-overlay"></div>
+
+  <header class="glass-nav">
+    <div class="nav-content">
+      <a routerLink="/manager" class="logo">
+        <div class="logo-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <span class="logo-text">Manager <span class="text-glow">Portal</span></span>
+      </a>
+
+      <div class="user-info">
+        <app-topbar-actions [homeLink]="'/'"></app-topbar-actions>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-inner animate-fade-in-up">
+    <section class="stats-hero">
+      <div class="hero-copy">
+        <div class="hero-kicker">Analytics overview</div>
+        <div class="hero-head">
+          <div>
+            <h1>Manager Statistics</h1>
+            <p>Track ticket flow, resolution output, and technician performance from one focused dashboard.</p>
+          </div>
+          <div class="hero-actions">
+            <button class="ghost-btn" routerLink="/manager">Back to Manager</button>
+            <button class="primary-btn" (click)="refresh()" [disabled]="loading">
+              {{ loading ? 'Refreshing...' : 'Refresh' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="metric-grid" *ngIf="!loading && !error">
+      <article class="metric-card">
+        <span class="metric-label">Total Tickets</span>
+        <strong>{{ totalTickets }}</strong>
+      </article>
+      <article class="metric-card accent">
+        <span class="metric-label">Resolved</span>
+        <strong>{{ totalResolved }}</strong>
+      </article>
+      <article class="metric-card warm">
+        <span class="metric-label">Closed</span>
+        <strong>{{ totalClosed }}</strong>
+      </article>
+      <article class="metric-card soft">
+        <span class="metric-label">Avg. Rating</span>
+        <strong>{{ averageRating | number:'1.1-1' }}</strong>
+      </article>
+    </section>
+
+    <section class="stats-card">
+      <div *ngIf="loading" class="loading-state">Loading dashboard...</div>
+      <div *ngIf="!loading && error" class="error-state">{{ error }}</div>
+
+      <ng-container *ngIf="!loading && !error">
+        <div class="section-header">
+          <div>
+            <h2>Visual trends</h2>
+            <p>Ticket status mix and monthly movement.</p>
+          </div>
+        </div>
+
+        <div class="chart-grid">
+          <div class="chart-card">
+            <app-pie-chart [data]="pieChartData"></app-pie-chart>
+          </div>
+          <div class="chart-card">
+            <app-line-chart [data]="lineChartData"></app-line-chart>
+          </div>
+        </div>
+
+        <div class="leaderboard-wrap">
+          <div class="section-header">
+            <div>
+              <h2>Technician Leaderboard</h2>
+              <p>Resolution count and average review score.</p>
+            </div>
+            <div class="leaderboard-note">Top technician: <strong>{{ topTechnician }}</strong></div>
+          </div>
+          <div *ngIf="leaderboard.length === 0">No leaderboard data.</div>
+          <table *ngIf="leaderboard.length > 0" class="leaderboard-table">
+            <thead>
+              <tr>
+                <th>Technician</th>
+                <th>Resolved/CLOSED tickets</th>
+                <th>Avg. rating</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of leaderboard">
+                <td>{{ item.fullName }}</td>
+                <td>{{ item.resolvedCount }}</td>
+                <td>{{ item.averageRating | number:'1.1-2' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
+    </section>
+  </main>
+</div>

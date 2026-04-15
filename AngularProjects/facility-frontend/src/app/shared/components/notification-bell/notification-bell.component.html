@@ -1,6 +1,8 @@
 <div class="notification-wrapper" *ngIf="isLoggedIn">
     <button class="notification-bell" (click)="toggleNotifications()" [class.has-unread]="unreadCount > 0" title="Notifications">
-        <i class="fas fa-bell"></i>
+        <svg class="bell-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Z"></path>
+        </svg>
         <span *ngIf="unreadCount > 0" class="unread-badge">{{ unreadCount }}</span>
     </button>
     
@@ -10,24 +12,42 @@
             <h3>Notifications</h3>
             <button (click)="markAllAsRead()" *ngIf="unreadCount > 0" class="mark-all-btn">Mark all read</button>
         </div>
+        <div class="filter-bar">
+            <label class="filter-unread">
+                <input type="checkbox" [(ngModel)]="unreadOnly" (change)="onFiltersChanged()" />
+                Unread only
+            </label>
+            <select [(ngModel)]="selectedType" (change)="onFiltersChanged()" class="type-filter">
+                <option value="">All types</option>
+                <option *ngFor="let type of typeOptions" [value]="type">{{ type === 'sla' ? 'SLA' : (type === 'ticket_update' ? 'Ticket Update' : 'General') }}</option>
+            </select>
+        </div>
         <div class="notification-list">
-            <div *ngIf="notifications.length === 0" class="empty-notifs">
+            <div *ngIf="isLoadingNotifications && notifications.length === 0" class="empty-notifs">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading notifications...</p>
+            </div>
+            <div *ngIf="!isLoadingNotifications && notifications.length === 0" class="empty-notifs">
                 <i class="fas fa-bell-slash"></i>
                 <p>No notifications yet</p>
             </div>
-            <div *ngFor="let n of notifications" 
-                 class="notif-item" 
-                 [class.unread]="!n.isRead"
-                 (click)="markAsRead(n)">
-                <div class="notif-dot" *ngIf="!n.isRead"></div>
-                <div class="notif-content">
-                    <p>{{ n.message }}</p>
-                    <div class="notif-meta">
-                        <span class="notif-time">{{ n.createdAt | date:'HH:mm dd/MM' }}</span>
-                        <span class="notif-action">Check status →</span>
+            <ng-container *ngIf="!isLoadingNotifications">
+                <div *ngFor="let n of notifications"
+                     class="notif-item" 
+                     [class.unread]="!n.isRead"
+                     (click)="markAsRead(n)">
+                    <div class="notif-dot" *ngIf="!n.isRead"></div>
+                    <div class="notif-content">
+                        <p>{{ n.message }}</p>
+                        <div class="notif-meta">
+                            <span class="notif-time">{{ n.createdAt | date:'HH:mm dd/MM' }}</span>
+                            <span class="notif-type" *ngIf="n.type">{{ n.type }}</span>
+                            <span class="notif-severity" *ngIf="n.severity" [ngClass]="n.severity.toLowerCase()">{{ n.severity }}</span>
+                            <span class="notif-action">Check status →</span>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </ng-container>
         </div>
     </div>
 </div>

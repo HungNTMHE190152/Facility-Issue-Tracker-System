@@ -18,4 +18,7 @@ public class MyTicketItemDTO
     public string? ImageAfter { get; set; }
     public string? TechnicianName { get; set; }
     public string? ReporterName { get; set; }
+    public DateTime? DueAt { get; set; }
+    public string SlaAlertLevel { get; set; } = "NONE";
+    public int? SlaMinutesRemaining { get; set; }
 }

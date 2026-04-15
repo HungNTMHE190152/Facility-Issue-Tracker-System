@@ -7,11 +7,12 @@ import { finalize } from 'rxjs/operators';
 import { TicketService } from '../../services/ticket.service';
 import { CategoryOption, MyTicketFilters, MyTicketItem } from '../../models/ticket.models';
 import { environment } from '../../../environments/environment';
+import { TopbarActionsComponent } from '../../shared/components/topbar-actions/topbar-actions.component';
 
 @Component({
   selector: 'app-my-tickets',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, TopbarActionsComponent],
   templateUrl: './my-tickets.component.html',
   styleUrl: './my-tickets.component.css'
 })
@@ -34,7 +35,10 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
     search: '',
     status: '',
     priority: null,
-    categoryId: null
+    categoryId: null,
+    fromDate: '',
+    toDate: '',
+    createdSort: 'desc'
   };
 
   // Modal states
@@ -166,7 +170,10 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
       search: '',
       status: '',
       priority: null,
-      categoryId: null
+      categoryId: null,
+      fromDate: '',
+      toDate: '',
+      createdSort: 'desc'
     };
     this.loadTickets();
   }
@@ -176,6 +183,13 @@ export class MyTicketsComponent implements OnInit, AfterViewInit, OnDestroy {
     if (priority === 2) return 'Medium';
     if (priority === 3) return 'High';
     return 'N/A';
+  }
+
+  getPriorityClass(priority?: number | null): string {
+    if (priority === 3) return 'priority-high';
+    if (priority === 2) return 'priority-medium';
+    if (priority === 1) return 'priority-low';
+    return 'priority-unknown';
   }
 
   truncateText(text: string | null | undefined, limit: number): string {
