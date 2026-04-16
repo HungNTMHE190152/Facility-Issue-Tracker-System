@@ -19,6 +19,10 @@ using System.Threading.Tasks;
 public class TicketsController : ControllerBase
 {
     private static readonly string[] ActiveWorkStatuses = new[] { "ASSIGNED", "ACCEPTED", "IN_PROGRESS", "PAUSED" };
+    private static readonly HashSet<string> AllowedHistoryStatuses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "OPEN", "ASSIGNED", "ACCEPTED", "IN_PROGRESS", "PAUSED", "RESOLVED", "CLOSED"
+    };
     private static readonly ConcurrentDictionary<string, byte> InFlightActions = new();
 
     private readonly AssContext _context;
@@ -65,6 +69,7 @@ public class TicketsController : ControllerBase
         {
             ("OPEN", "ASSIGNED") => true,
             ("ASSIGNED", "ACCEPTED") => true,
+            ("ASSIGNED", "IN_PROGRESS") => true,
             ("ASSIGNED", "OPEN") => true,
             ("ACCEPTED", "IN_PROGRESS") => true,
             ("ACCEPTED", "OPEN") => true,
@@ -74,6 +79,26 @@ public class TicketsController : ControllerBase
             ("RESOLVED", "CLOSED") => true,
             _ => false
         };
+    }
+
+    private static string NormalizeHistoryStatus(string? status, string fallback = "OPEN")
+    {
+        var normalized = NormalizeStatus(status);
+        if (AllowedHistoryStatuses.Contains(normalized))
+            return normalized;
+
+        var raw = (status ?? string.Empty).Trim().ToUpperInvariant();
+        if (!string.IsNullOrEmpty(raw))
+        {
+            foreach (var allowed in AllowedHistoryStatuses)
+            {
+                if (raw.Contains(allowed, StringComparison.Ordinal))
+                    return allowed;
+            }
+        }
+
+        var normalizedFallback = NormalizeStatus(fallback);
+        return AllowedHistoryStatuses.Contains(normalizedFallback) ? normalizedFallback : "OPEN";
     }
 
     private bool IsAssignmentExpired(Ticket ticket, DateTime? now = null)
@@ -221,19 +246,19 @@ public class TicketsController : ControllerBase
         try
         {
             var changedBy = changerId ?? GetCurrentUserId();
-            
-            // If details are provided, we try to fit them into the 20-char limit of the DB column
-            // for "Advanced History" without breaking the schema.
-            string? finalNewStatus = newStatus;
-            if (!string.IsNullOrEmpty(details))
+
+            var finalOldStatus = NormalizeHistoryStatus(oldStatus);
+            var finalNewStatus = NormalizeHistoryStatus(newStatus, finalOldStatus);
+
+            if (!string.IsNullOrWhiteSpace(details))
             {
-                finalNewStatus = details.Length > 20 ? details.Substring(0, 20) : details;
+                Console.WriteLine($"[TicketHistory] Extra details ignored for ticket #{ticketId}: {details}");
             }
 
             var history = new TicketHistory
             {
                 TicketId = ticketId,
-                OldStatus = oldStatus?.Length > 20 ? oldStatus.Substring(0, 20) : oldStatus,
+                OldStatus = finalOldStatus,
                 NewStatus = finalNewStatus,
                 ChangedBy = changedBy,
                 ChangedAt = DateTime.Now
